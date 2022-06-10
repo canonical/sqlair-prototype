@@ -9,7 +9,7 @@ const (
 	SEPARATOR
 
 	IDENT
-	INT //int literal
+	NUM // Number literal.
 	STRING
 
 	COMMA // ,

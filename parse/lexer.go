@@ -76,7 +76,7 @@ func (l *Lexer) readToken(pos Position) Token {
 		return tok
 
 	case isDigit(l.char):
-		tok.Type = INT
+		tok.Type = NUM
 		tok.Literal = l.readNumber()
 		return tok
 
@@ -121,12 +121,11 @@ func (l *Lexer) readString(r rune) string {
 			return string(ret)
 
 		case r:
-			if i == 0 {
-				// First time through the loop. Just append the quote.
-				ret = append(ret, l.char)
-			} else {
-				ret = append(ret, l.char)
+			ret = append(ret, l.char)
 
+			// If this is the first time through the loop, we just append
+			// the open quote. Otherwise, we're looking for termination.
+			if i != 0 {
 				// Check if this appears to be a closing quote.
 				// If it is, return what we've accrued so far.
 				// TODO (manadart 2022-06-08): This is very naive and will not
