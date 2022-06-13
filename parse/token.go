@@ -6,7 +6,6 @@ type TokenType int
 const (
 	UNKNOWN TokenType = iota - 1
 	EOF
-	SEPARATOR
 
 	IDENT
 	NUM // Number literal.

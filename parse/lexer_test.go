@@ -21,8 +21,8 @@ WHERE address_id = $Address.id;
 `
 
 	expected := []string{
-		"SELECT", " ", "*", " ", "AS", " ", "&", "Person", ".", "*", " ", "FROM", " ", "person", " ",
-		"WHERE", " ", "address_id", " ", "=", " ", "$", "Address", ".", "id", ";",
+		"SELECT", "*", "AS", "&", "Person", ".", "*", "FROM", "person",
+		"WHERE", "address_id", "=", "$", "Address", ".", "id", ";",
 	}
 
 	assert.Equal(t, expected, stringsFromTokens(tokensForStatement(stmt)))
@@ -35,8 +35,8 @@ FROM   person
 WHERE  salary = 100000.5;`
 
 	expected := []string{
-		"SELECT", " ", "*", " ", "AS", " ", "&", "Person", ".", "*", " ", "FROM", " ", "person", " ",
-		"WHERE", " ", "salary", " ", "=", " ", "100000.5", ";",
+		"SELECT", "*", "AS", "&", "Person", ".", "*", "FROM", "person",
+		"WHERE", "salary", "=", "100000.5", ";",
 	}
 
 	assert.Equal(t, expected, stringsFromTokens(tokensForStatement(stmt)))
@@ -49,8 +49,8 @@ FROM   person
 WHERE  name IN ('Lorn', 'Onos T''oolan');`
 
 	expected := []string{
-		"SELECT", " ", "*", " ", "AS", " ", "&", "Person", ".", "*", " ", "FROM", " ", "person", " ",
-		"WHERE", " ", "name", " ", "IN", " ", "(", "'Lorn'", ",", " ", "'Onos T''oolan'", ")", ";",
+		"SELECT", "*", "AS", "&", "Person", ".", "*", "FROM", "person",
+		"WHERE", "name", "IN", "(", "'Lorn'", ",", "'Onos T''oolan'", ")", ";",
 	}
 
 	assert.Equal(t, expected, stringsFromTokens(tokensForStatement(stmt)))
@@ -70,14 +70,8 @@ FROM person`
 		{Offset: 14, Line: 2},
 	}
 
-	// Ignore the spaces for cogency.
-	var posIndex int
-	for _, token := range tokens {
-		if token.Type == SEPARATOR {
-			continue
-		}
-		assert.Equal(t, positions[posIndex], token.Pos)
-		posIndex++
+	for i, token := range tokens {
+		assert.Equal(t, positions[i], token.Pos)
 	}
 }
 
