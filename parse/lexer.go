@@ -106,7 +106,7 @@ func (l *Lexer) readComplexToken(pos Position) Token {
 	return tok
 }
 
-// readIdentifier calls nextChar through to the end of the identifier,
+// readIdentifier calls nextChar until it detects the end of an identifier,
 // then returns the range of input from when we started reading.
 func (l *Lexer) readIdentifier() string {
 	pos := l.offset
@@ -118,29 +118,30 @@ func (l *Lexer) readIdentifier() string {
 	return l.input[pos:l.offset]
 }
 
+// readNumber calls nextChar until it detects the end of a quoted string,
+// then returns the range of input from when we started reading.
+// The return includes the quotes.
 func (l *Lexer) readString(r rune) string {
 	pos := l.offset
 
-	for i := 0; true; i++ {
-		// Unterminated string. Will be handled by parser.
+	maybeCloser := true
+	for {
+		// Unterminated string. Will be handled downstream.
 		if l.char == 0 {
 			l.nextChar()
 			break
 		}
 
 		if l.char == r {
-			// If this is the first time through the loop, we just append
-			// the open quote. Otherwise, we're looking for termination.
-			if i != 0 {
-				// Check if this appears to be a closing quote.
-				// If it is, return what we've accrued so far.
-				// TODO (manadart 2022-06-08): This is very naive and will not
-				// correctly handle some edge cases. Review for robustness.
-				next := l.peek()
-				if next == ' ' || next == '\n' || next == 0 || next == ';' || next == ',' || next == ')' {
-					l.nextChar()
-					break
-				}
+			// We're looking for string terminations.
+			// Each quote is regarded an opener, or potential closer.
+			maybeCloser = !maybeCloser
+
+			// If this looks like a closing quote, check if it might be an
+			// escape for a following quote. If not, we're done.
+			if maybeCloser && l.peek() != r {
+				l.nextChar()
+				break
 			}
 		}
 
@@ -150,7 +151,8 @@ func (l *Lexer) readString(r rune) string {
 	return l.input[pos:l.offset]
 }
 
-// readNumber returns the number beginning at current offset.
+// readNumber calls nextChar until it detects the end of a number,
+// then returns the range of input from when we started reading.
 func (l *Lexer) readNumber() string {
 	pos := l.offset
 

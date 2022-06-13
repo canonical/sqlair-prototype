@@ -60,11 +60,11 @@ func TestLexerSimpleCorrectQuotedString(t *testing.T) {
 	stmt := `
 SELECT * AS &Person.* 
 FROM   person
-WHERE  name IN ('Lorn', 'Onos T''oolan');`
+WHERE  name IN ('Lorn', 'Onos T''oolan', '', ''' ''');`
 
 	expected := []string{
 		"SELECT", "*", "AS", "&", "Person", ".", "*", "FROM", "person",
-		"WHERE", "name", "IN", "(", "'Lorn'", ",", "'Onos T''oolan'", ")", ";",
+		"WHERE", "name", "IN", "(", "'Lorn'", ",", "'Onos T''oolan'", ",", "''", ",", "''' '''", ")", ";",
 	}
 
 	assert.Equal(t, expected, stringsFromTokens(tokensForStatement(stmt)))
