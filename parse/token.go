@@ -46,10 +46,11 @@ type Position struct {
 	// Offset is the character offset within the containing statement.
 	Offset int
 
-	// Line indicates the line on which the statement occurs.
-	// It is used for reconstructing statements with
-	// some resemblance to the original formatting.
+	// Line indicates the line on which the token occurs.
 	Line int
+
+	// Column indicates the textual column on which the token occurs.
+	Column int
 }
 
 // Token describes the smallest part of a larger DSL statement

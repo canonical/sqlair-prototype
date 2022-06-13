@@ -18,14 +18,16 @@ type Lexer struct {
 	offset     int
 	readOffset int
 	line       int
+	column     int
 }
 
 // NewLexer creates a new Lexer from a given input and primes it
 // with the first non-whitespace character before returning.
 func NewLexer(input string) *Lexer {
 	l := &Lexer{
-		input: []rune(strings.TrimSpace(input)),
-		line:  1,
+		input:  []rune(strings.TrimSpace(input)),
+		line:   1,
+		column: 1,
 	}
 	l.nextChar()
 	return l
@@ -59,6 +61,7 @@ func (l *Lexer) position() Position {
 	return Position{
 		Offset: l.offset,
 		Line:   l.line,
+		Column: l.column - 1,
 	}
 }
 
@@ -180,7 +183,9 @@ func (l *Lexer) nextChar() {
 		l.char = l.input[l.readOffset]
 		if l.char == '\n' {
 			l.line++
+			l.column = 0
 		}
+		l.column++
 	}
 
 	l.offset = l.readOffset

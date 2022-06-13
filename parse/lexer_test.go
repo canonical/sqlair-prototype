@@ -64,10 +64,10 @@ FROM person`
 	tokens := tokensForStatement(stmt)
 
 	positions := []Position{
-		{Offset: 0, Line: 1},
-		{Offset: 7, Line: 1},
-		{Offset: 9, Line: 2},
-		{Offset: 14, Line: 2},
+		{Offset: 0, Line: 1, Column: 1},
+		{Offset: 7, Line: 1, Column: 8},
+		{Offset: 9, Line: 2, Column: 1},
+		{Offset: 14, Line: 2, Column: 6},
 	}
 
 	for i, token := range tokens {
