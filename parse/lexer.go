@@ -31,8 +31,9 @@ func NewLexer(input string) *Lexer {
 	return l
 }
 
-// NextToken attempts to grab the next token available.
+// NextToken returns the next token based on the current offset.
 // Multiple whitespaces are skipped over and conflated as a single separator.
+// The EOF token is returned if we have reached the end of the input.
 func (l *Lexer) NextToken() Token {
 	pos := l.position()
 
@@ -41,15 +42,25 @@ func (l *Lexer) NextToken() Token {
 		skipped = true
 	}
 	if skipped {
-		return separatorToken(pos)
+		return Token{
+			Type:    SEPARATOR,
+			Literal: " ",
+			Pos:     pos,
+		}
 	}
 
-	if token, isRune := maybeRuneToken(l.char, pos); isRune {
+	if runeType, isKnown := knownRuneTokens[l.char]; isKnown {
+		lit := string(l.char)
 		l.nextChar()
-		return token
+		return Token{
+			Type:    runeType,
+			Literal: lit,
+			Pos:     pos,
+		}
+
 	}
 
-	return l.readToken(pos)
+	return l.readComplexToken(pos)
 }
 
 func (l *Lexer) position() Position {
@@ -70,7 +81,7 @@ func (l *Lexer) skipWhitespace() bool {
 	return true
 }
 
-func (l *Lexer) readToken(pos Position) Token {
+func (l *Lexer) readComplexToken(pos Position) Token {
 	tok := Token{Pos: pos}
 
 	switch {
