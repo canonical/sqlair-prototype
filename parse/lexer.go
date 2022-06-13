@@ -191,18 +191,13 @@ func (l *Lexer) nextChar() {
 	l.readOffset++
 }
 
-// peek attempts to read the next rune if available.
+// peek returns the next rune to be read without moving the lexer forward.
 func (l *Lexer) peek() rune {
-	return l.peekN(0)
-}
-
-// peekN attempts to read the next indicated by
-// the input offset from the current offset.
-func (l *Lexer) peekN(n int) rune {
-	if l.readOffset+n >= len(l.input) {
+	if l.readOffset >= len(l.input) {
 		return 0
 	}
-	peek, _ := utf8.DecodeLastRuneInString(string(l.input[l.readOffset+n]))
+
+	peek, _ := utf8.DecodeLastRuneInString(string(l.input[l.readOffset]))
 	return peek
 }
 
