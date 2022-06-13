@@ -12,7 +12,7 @@ import (
 // `NextToken` to advance through the input.
 // Offsets are zero-indexed. Lines start at 1.
 type Lexer struct {
-	input []rune
+	input string
 	char  rune
 
 	offset     int
@@ -25,7 +25,7 @@ type Lexer struct {
 // with the first non-whitespace character before returning.
 func NewLexer(input string) *Lexer {
 	l := &Lexer{
-		input:  []rune(strings.TrimSpace(input)),
+		input:  strings.TrimSpace(input),
 		line:   1,
 		column: 1,
 	}
@@ -115,7 +115,7 @@ func (l *Lexer) readIdentifier() string {
 		l.nextChar()
 	}
 
-	return string(l.input[pos:l.offset])
+	return l.input[pos:l.offset]
 }
 
 func (l *Lexer) readString(r rune) string {
@@ -179,7 +179,7 @@ func (l *Lexer) nextChar() {
 	if l.readOffset >= len(l.input) {
 		l.char = 0
 	} else {
-		l.char = l.input[l.readOffset]
+		l.char, _ = utf8.DecodeLastRuneInString(string(l.input[l.readOffset]))
 		if l.char == '\n' {
 			l.line++
 			l.column = 0
@@ -202,7 +202,8 @@ func (l *Lexer) peekN(n int) rune {
 	if l.readOffset+n >= len(l.input) {
 		return 0
 	}
-	return l.input[l.readOffset+n]
+	peek, _ := utf8.DecodeLastRuneInString(string(l.input[l.readOffset+n]))
+	return peek
 }
 
 func isDigit(char rune) bool {
