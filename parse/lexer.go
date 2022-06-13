@@ -100,10 +100,9 @@ func (l *Lexer) readComplexToken(pos Position) Token {
 		return tok
 	}
 
-	l.nextChar()
-
 	tok.Type = UNKNOWN
 	tok.Literal = string(l.char)
+	l.nextChar()
 	return tok
 }
 
