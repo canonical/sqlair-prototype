@@ -94,7 +94,7 @@ func (l *Lexer) readComplexToken(pos Position) Token {
 		tok.Literal = l.readNumber()
 		return tok
 
-	case isLetter(l.char):
+	case unicode.IsLetter(l.char) || l.char == '_':
 		tok.Type = IDENT
 		tok.Literal = l.readIdentifier()
 		return tok
@@ -117,7 +117,7 @@ func (l *Lexer) readComplexToken(pos Position) Token {
 func (l *Lexer) readIdentifier() string {
 	pos := l.offset
 
-	for isLetter(l.char) || isDigit(l.char) || l.char == '-' {
+	for unicode.IsLetter(l.char) || isDigit(l.char) || l.char == '_' {
 		l.nextChar()
 	}
 
@@ -207,13 +207,6 @@ func (l *Lexer) peekN(n int) rune {
 		return 0
 	}
 	return l.input[l.readOffset+n]
-}
-
-func isLetter(char rune) bool {
-	return 'a' <= char && char <= 'z' ||
-		'A' <= char && char <= 'Z' ||
-		char == '_' ||
-		char >= utf8.RuneSelf && unicode.IsLetter(char)
 }
 
 func isDigit(char rune) bool {
