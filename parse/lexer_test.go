@@ -64,10 +64,10 @@ FROM person`
 	tokens := tokensForStatement(stmt)
 
 	positions := []Position{
-		{Offset: 0, Line: 0},
-		{Offset: 7, Line: 0},
-		{Offset: 9, Line: 1},
-		{Offset: 14, Line: 1},
+		{Offset: 0, Line: 1},
+		{Offset: 7, Line: 1},
+		{Offset: 9, Line: 2},
+		{Offset: 14, Line: 2},
 	}
 
 	// Ignore the spaces for cogency.

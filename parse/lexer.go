@@ -10,7 +10,7 @@ import (
 // reads it as tokens for consumption by our parser.
 // It operates in a lazy fashion, requiring a call to
 // `NextToken` to advance through the input.
-// Offsets and lines are zero-indexed.
+// Offsets are zero-indexed. Lines start at 1.
 type Lexer struct {
 	input []rune
 	char  rune
@@ -23,7 +23,10 @@ type Lexer struct {
 // NewLexer creates a new Lexer from a given input and primes it
 // with the first non-whitespace character before returning.
 func NewLexer(input string) *Lexer {
-	l := &Lexer{input: []rune(strings.TrimSpace(input))}
+	l := &Lexer{
+		input: []rune(strings.TrimSpace(input)),
+		line:  1,
+	}
 	l.nextChar()
 	return l
 }
