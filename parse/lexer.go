@@ -119,18 +119,16 @@ func (l *Lexer) readIdentifier() string {
 }
 
 func (l *Lexer) readString(r rune) string {
-	var ret []rune
+	pos := l.offset
 
 	for i := 0; true; i++ {
-		switch l.char {
-		case 0:
-			// Unterminated string. Will be handled by parser.
+		// Unterminated string. Will be handled by parser.
+		if l.char == 0 {
 			l.nextChar()
-			return string(ret)
+			break
+		}
 
-		case r:
-			ret = append(ret, l.char)
-
+		if l.char == r {
 			// If this is the first time through the loop, we just append
 			// the open quote. Otherwise, we're looking for termination.
 			if i != 0 {
@@ -141,16 +139,15 @@ func (l *Lexer) readString(r rune) string {
 				next := l.peek()
 				if next == ' ' || next == '\n' || next == 0 || next == ';' || next == ',' || next == ')' {
 					l.nextChar()
-					return string(ret)
+					break
 				}
 			}
-		default:
-			ret = append(ret, l.char)
 		}
+
 		l.nextChar()
 	}
 
-	return string(ret)
+	return l.input[pos:l.offset]
 }
 
 // readNumber returns the number beginning at current offset.
