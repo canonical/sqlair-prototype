@@ -155,22 +155,25 @@ func (l *Lexer) readString(r rune) string {
 
 // readNumber returns the number beginning at current offset.
 func (l *Lexer) readNumber() string {
-	var ret []rune
+	pos := l.offset
 
-	ret = append(ret, l.char)
-	l.nextChar()
-
+	var oneDecimal bool
 	for isDigit(l.char) || l.char == '.' {
 		if l.char == '.' {
-			if l.peek() == '.' {
-				return string(ret)
-			}
+			oneDecimal = true
 		}
 
-		ret = append(ret, l.char)
+		// If we've already seen a decimal point and there is one ahead,
+		// just finish the token accumulation. Syntax error goes downstream.
+		if oneDecimal && l.peek() == '.' {
+			l.nextChar()
+			break
+		}
+
 		l.nextChar()
 	}
-	return string(ret)
+
+	return l.input[pos:l.offset]
 }
 
 // nextChar reads the next character from the

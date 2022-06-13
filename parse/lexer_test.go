@@ -42,6 +42,20 @@ WHERE  salary = 100000.5;`
 	assert.Equal(t, expected, stringsFromTokens(tokensForStatement(stmt)))
 }
 
+func TestLexerBadNumber(t *testing.T) {
+	stmt := `
+SELECT * AS &Person.* 
+FROM   person
+WHERE  salary = 100000.5.6;`
+
+	expected := []string{
+		"SELECT", "*", "AS", "&", "Person", ".", "*", "FROM", "person",
+		"WHERE", "salary", "=", "100000.5", ".", "6", ";",
+	}
+
+	assert.Equal(t, expected, stringsFromTokens(tokensForStatement(stmt)))
+}
+
 func TestLexerSimpleCorrectQuotedString(t *testing.T) {
 	stmt := `
 SELECT * AS &Person.* 
