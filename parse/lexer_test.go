@@ -1,16 +1,10 @@
 package parse
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
-
-func TestIsSingleQuote(t *testing.T) {
-	r := []rune(`'`)
-	assert.True(t, isSingleQuote(r[0]), fmt.Sprintf("%v is not a single quote", r[0]))
-}
 
 func TestLexerSimpleCorrectLiterals(t *testing.T) {
 	// Note multiple spaces and carriage returns.

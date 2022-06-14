@@ -94,7 +94,7 @@ func (l *Lexer) readComplexToken(pos Position) Token {
 		tok.Literal = l.readIdentifier()
 		return tok
 
-	case isSingleQuote(l.char):
+	case l.char == '\'':
 		tok.Type = STRING
 		tok.Literal = l.readString(l.char)
 		return tok
@@ -180,17 +180,19 @@ func (l *Lexer) readNumber() string {
 func (l *Lexer) nextChar() {
 	if l.readOffset >= len(l.input) {
 		l.char = 0
-	} else {
-		l.char, _ = utf8.DecodeLastRuneInString(string(l.input[l.readOffset]))
-		if l.char == '\n' {
-			l.line++
-			l.column = 0
-		}
-		l.column++
+		l.offset = l.readOffset
+		return
 	}
 
+	var size int
+	l.char, size = utf8.DecodeRuneInString(l.input[l.readOffset:])
+	if l.char == '\n' {
+		l.line++
+		l.column = 0
+	}
+	l.column++
 	l.offset = l.readOffset
-	l.readOffset++
+	l.readOffset += size
 }
 
 // peek returns the next rune to be read without moving the lexer forward.
@@ -199,14 +201,10 @@ func (l *Lexer) peek() rune {
 		return 0
 	}
 
-	peek, _ := utf8.DecodeLastRuneInString(string(l.input[l.readOffset]))
+	peek, _ := utf8.DecodeRuneInString(l.input[l.readOffset:])
 	return peek
 }
 
 func isDigit(char rune) bool {
 	return '0' <= char && char <= '9' || char >= utf8.RuneSelf && unicode.IsDigit(char)
-}
-
-func isSingleQuote(char rune) bool {
-	return char == 39
 }
