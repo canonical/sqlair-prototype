@@ -36,7 +36,8 @@ func (r *cache) Reflect(value any) (Kind, error) {
 	return ri, nil
 }
 
-// generate
+// generate produces and returns reflection information for the input
+// reflect.Value that is specifically required for Sqlair operation.
 func generate(value reflect.Value) (Kind, error) {
 	// Dereference the pointer if it is one.
 	value = reflect.Indirect(value)
