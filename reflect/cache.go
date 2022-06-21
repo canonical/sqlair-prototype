@@ -10,21 +10,14 @@ import (
 
 // Cache is responsible for generating, caching and retrieving reflection
 // information for use in parsing and executing Sqlair DSL statements.
-type Cache struct {
+type cache struct {
 	mutex sync.RWMutex
 	cache map[reflect.Type]Kind
 }
 
-// NewCache returns a reference to a new cache.
-func NewCache() *Cache {
-	return &Cache{
-		cache: make(map[reflect.Type]Kind),
-	}
-}
-
 // Reflect will return the Info of a given type,
 // generating and caching as required.
-func (r *Cache) Reflect(value any) (Kind, error) {
+func (r *cache) Reflect(value any) (Kind, error) {
 	v := reflect.ValueOf(value)
 	v = reflect.Indirect(v)
 

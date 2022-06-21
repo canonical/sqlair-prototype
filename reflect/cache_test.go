@@ -2,22 +2,36 @@ package reflect
 
 import (
 	"reflect"
+	"sync"
 	"testing"
 
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestReflectSimple(t *testing.T) {
-	var i int64
+func TestReflectSimpleConcurrent(t *testing.T) {
+	var num int64
 
-	info, err := NewCache().Reflect(i)
+	wg := sync.WaitGroup{}
+
+	// Set up some concurrent access.
+	for i := 0; i < 5; i++ {
+		wg.Add(1)
+		go func() {
+			_, _ = Cache().Reflect(num)
+			wg.Done()
+		}()
+	}
+
+	info, err := Cache().Reflect(num)
 	assert.Nil(t, err)
 
 	assert.Equal(t, reflect.Int64, info.Kind())
 
 	_, ok := info.(Value)
 	assert.True(t, ok)
+
+	wg.Wait()
 }
 
 func TestReflectStruct(t *testing.T) {
@@ -33,7 +47,7 @@ func TestReflectStruct(t *testing.T) {
 		NotInDB: "doesn't matter",
 	}
 
-	info, err := NewCache().Reflect(s)
+	info, err := Cache().Reflect(s)
 	assert.Nil(t, err)
 
 	assert.Equal(t, reflect.Struct, info.Kind())
@@ -61,6 +75,6 @@ func TestReflectBadTagError(t *testing.T) {
 
 	s := something{ID: 99}
 
-	_, err := NewCache().Reflect(s)
+	_, err := Cache().Reflect(s)
 	assert.Error(t, errors.New(`unexpected tag value "bad-juju"`), err)
 }
