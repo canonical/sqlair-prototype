@@ -13,37 +13,42 @@ type Parser struct {
         l *Lexer
 }
 
-type QueryArgument struct {
-        name  string // Name of the element (e.g. Persona)
-        field string // What field we are accessing
-        from  int    // start position in the string
-        to    int    // end position in the string
-        //TODO: do we need a reference to the original statement?
-}
-
 // Parser constructor function
 func NewParser(s string) *Parser {
         return &Parser{l: NewLexer(s)}
 }
 
-func (p *Parser) NextQueryArgument() (QueryArgument, error) {
+// Returns the next expression. This can be:
+//
+// * A pass through expression
+// * An input expression
+// * An output expression
+func (p *Parser) ParseNextExpression() (QueryExpression, error) {
         var token Token
-        for token = p.l.NextToken(); token.Type != BITAND && token.Type != EOF; token = p.l.NextToken() {
+	var pte PassthroughExpression
+
+        for token = p.l.NextToken(); token.Type != BITAND && token.Type != DOLLAR && token.Type != EOF; token = p.l.NextToken() {
+		// Accumulate as a pass through
+		pte.Expressions = append(pte.Expressions, token)
         }
 
         if token.Type == EOF {
                 // No more input
-                return QueryArgument{}, io.EOF
+                return QueryExpression{}, io.EOF
         }
+
+	// Store either & or $.
+	delimiter := token
 
         start_pos := p.l.offset
         token = p.l.NextToken()
         if token.Type == IDENT {
-                elemType := token.Literal
+                elemType := token
                 token = p.l.NextToken()
+		period = token
                 if token.Type == PERIOD {
                         token = p.l.NextToken()
-                        var field string
+			cols := token
                         if token.Type == ASTERISK {
                                 field = "all"
                         } else if token.Type == IDENT {
@@ -58,24 +63,23 @@ func (p *Parser) NextQueryArgument() (QueryArgument, error) {
                                 to:    p.l.offset,
                         }, nil
                         log.Printf("Type: %s field: %s", elemType, field)
-                }
-        }
+                } else {
+			pte.Expressions = append(pte.Expressions, token)
+		}
+        } else {
+		pte.Expressions = append(pte.Expressions, token)
+	}
 
         return QueryArgument{}, nil
 }
 
-func (p *Parser) Parse() ([]QueryArgument, error) {
-        // Get query arguments from the statement
-        // until we run out of text
+func (p *Parser) Parse() (*QueryExpression, error) {
+        var qe QueryExpression
 
-        //arguments := make([]QueryArgument, 1)
-        var arguments []QueryArgument
-
-        for qa, err := p.NextQueryArgument(); err == nil; qa, err = p.NextQueryArgument() {
-                if qa != (QueryArgument{}) {
-                        arguments = append(arguments, qa)
-                }
+	// Build AST
+        for exp, err := p.ParseNextExpression(); err == nil; exp, err = p.ParseNextExpression() {
+		qe.Expressions = append(qe.Expressions, exp)
         }
 
-        return arguments, nil
+        return qe, nil
 }
