@@ -1,7 +1,7 @@
 package parse
 
 import (
-        "io"
+	"fmt"
         "log"
 )
 
@@ -18,59 +18,67 @@ func NewParser(s string) *Parser {
         return &Parser{l: NewLexer(s)}
 }
 
+type EOFError struct {
+}
+
+func (e *EOFError) Error() string {
+	return fmt.Sprintf("EOF")
+}
+
 // Returns the next expression. This can be:
 //
 // * A pass through expression
 // * An input expression
 // * An output expression
-func (p *Parser) ParseNextExpression() (QueryExpression, error) {
+func (p *Parser) ParseNextExpression() (Expression, error) {
         var token Token
 	var pte PassthroughExpression
 
-        for token = p.l.NextToken(); token.Type != BITAND && token.Type != DOLLAR && token.Type != EOF; token = p.l.NextToken() {
+	for token = p.l.NextToken(); token.Type != BITAND && token.Type != DOLLAR && token.Type != EOF; token = p.l.NextToken() {
 		// Accumulate as a pass through
-		pte.Expressions = append(pte.Expressions, token)
-        }
+		pte.Elements = append(pte.Elements, Element {Token: token})
+	}
 
         if token.Type == EOF {
                 // No more input
-                return QueryExpression{}, io.EOF
+                return &pte, &EOFError{}
         }
 
 	// Store either & or $.
 	delimiter := token
 
-        start_pos := p.l.offset
-        token = p.l.NextToken()
-        if token.Type == IDENT {
-                elemType := token
-                token = p.l.NextToken()
-		period = token
-                if token.Type == PERIOD {
-                        token = p.l.NextToken()
+	token = p.l.NextToken()
+	if token.Type == IDENT {
+		elemType := token
+		token = p.l.NextToken()
+		period := token
+		if token.Type == PERIOD {
+			token = p.l.NextToken()
 			cols := token
-                        if token.Type == ASTERISK {
-                                field = "all"
-                        } else if token.Type == IDENT {
-                                field = token.Literal
-                        } else {
-                                return QueryArgument{}, nil
-                        }
-                        return QueryArgument{
-                                name:  elemType,
-                                field: field,
-                                from:  start_pos,
-                                to:    p.l.offset,
-                        }, nil
-                        log.Printf("Type: %s field: %s", elemType, field)
-                } else {
-			pte.Expressions = append(pte.Expressions, token)
+			if delimiter.Type == BITAND {
+				return &OutputExpression {
+					Amp:	Element {Token: delimiter},
+					Name:	Element {Token: elemType},
+					Period:	Element {Token: period},
+					Cols:	Element {Token: cols},
+				}, nil
+			} else if delimiter.Type == DOLLAR {
+				return &InputExpression {
+					Dollar:	Element {Token: delimiter},
+					Name:	Element {Token: elemType},
+					Period:	Element {Token: period},
+					Cols:	Element {Token: cols},
+				}, nil
+			}
+			log.Printf("Type: %s cols: %s", elemType.Literal, cols.Literal)
+		} else {
+			pte.Elements = append(pte.Elements, Element {Token: token})
 		}
-        } else {
-		pte.Expressions = append(pte.Expressions, token)
+	} else {
+		pte.Elements = append(pte.Elements, Element {Token: token})
 	}
 
-        return QueryArgument{}, nil
+        return &pte, nil
 }
 
 func (p *Parser) Parse() (*QueryExpression, error) {
@@ -81,5 +89,5 @@ func (p *Parser) Parse() (*QueryExpression, error) {
 		qe.Expressions = append(qe.Expressions, exp)
         }
 
-        return qe, nil
+        return &qe, nil
 }
