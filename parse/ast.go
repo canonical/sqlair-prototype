@@ -54,3 +54,17 @@ type Expression interface {
 	// String returns the string that constitutes the expression.
 	String() string
 }
+
+// Walk recursively iterates depth-first over the input expression tree,
+// calling the input function. If it returns false, the iteration terminates.
+func Walk(parent Expression, visit func(Expression) bool) bool {
+	if !visit(parent) {
+		return false
+	}
+	for _, child := range parent.Expressions() {
+		if !Walk(child, visit) {
+			return false
+		}
+	}
+	return true
+}
