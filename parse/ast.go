@@ -165,11 +165,11 @@ func (dml *DMLExpression) End() Position {
 }
 
 func (dml *DMLExpression) String() string {
-	var os bytes.Buffer
+	var sb bytes.Buffer
 	for _, exp := range dml.Children {
-		os.WriteString(exp.String())
+		sb.WriteString(exp.String())
 	}
-	return os.String()
+	return sb.String()
 }
 
 type DDLExpression struct {
@@ -193,11 +193,11 @@ func (ddl *DDLExpression) End() Position {
 }
 
 func (ddl *DDLExpression) String() string {
-	var os bytes.Buffer
+	var sb bytes.Buffer
 	for _, exp := range ddl.Children {
-		os.WriteString(exp.String())
+		sb.WriteString(exp.String())
 	}
-	return os.String()
+	return sb.String()
 }
 
 type GroupedColumnsExpression struct {
@@ -224,10 +224,10 @@ func (gce *GroupedColumnsExpression) String() string {
 	var sb strings.Builder
 	sb.WriteByte('(')
 	for i, exp := range gce.Children {
-		sb.WriteString(exp.String())
-		if i != len(gce.Children)-1 {
+		if i > 0 {
 			sb.WriteString(", ")
 		}
+		sb.WriteString(exp.String())
 	}
 	sb.WriteByte(')')
 	return sb.String()

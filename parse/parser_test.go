@@ -6,6 +6,18 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func makeToken(t TokenType, literal string, offset, line, column int) Token {
+	return Token{
+		t,
+		literal,
+		Position{
+			offset,
+			line,
+			column,
+		},
+	}
+}
+
 // Use go test -v for printing the AST
 func printAST(t *testing.T, e Expression, indentation int) {
 	var ind string
@@ -21,6 +33,7 @@ func printAST(t *testing.T, e Expression, indentation int) {
 	}
 }
 
+// Check we handle spaces and line breaks properly
 func TestParserCarriageReturnAndSpaces(t *testing.T) {
 	stmt := `SELECT      a
 	AS myalias    FROM
@@ -45,6 +58,7 @@ func TestParserCarriageReturnAndSpaces(t *testing.T) {
 	}
 }
 
+// Check we parse column groups properly
 func TestParserSimpleGroup(t *testing.T) {
 	stmt := `SELECT (a, b) AS &Person.* FROM person`
 
@@ -57,98 +71,35 @@ func TestParserSimpleGroup(t *testing.T) {
 	expected := &SQLExpression{
 		Children: []Expression{
 			&IdentityExpression{
-				Token{Type: IDENT,
-					Literal: "SELECT",
-					Pos: Position{
-						Offset: 0,
-						Line:   1,
-						Column: 1,
-					},
-				},
+				makeToken(IDENT, "SELECT", 0, 1, 1),
 			},
 			&GroupedColumnsExpression{
 				Children: []Expression{
 					&IdentityExpression{
-						Token{Type: IDENT,
-							Literal: "a",
-							Pos: Position{
-								Offset: 8,
-								Line:   1,
-								Column: 9,
-							},
-						},
+						makeToken(IDENT, "a", 8, 1, 9),
 					},
 					&IdentityExpression{
-						Token{Type: IDENT,
-							Literal: "b",
-							Pos: Position{
-								Offset: 11,
-								Line:   1,
-								Column: 12,
-							},
-						},
+						makeToken(IDENT, "b", 11, 1, 12),
 					},
 				},
 			},
 			&IdentityExpression{
-				Token{Type: IDENT,
-					Literal: "AS",
-					Pos: Position{
-						Offset: 14,
-						Line:   1,
-						Column: 15,
-					},
-				},
+				makeToken(IDENT, "AS", 14, 1, 15),
 			},
 			&OutputTargetExpression{
-				Marker: Token{Type: BITAND,
-					Literal: "&",
-					Pos: Position{
-						Offset: 17,
-						Line:   1,
-						Column: 18,
-					},
-				},
+				Marker: makeToken(BITAND, "&", 17, 1, 18),
 				Name: &IdentityExpression{
-					Token{Type: IDENT,
-						Literal: "Person",
-						Pos: Position{
-							Offset: 18,
-							Line:   1,
-							Column: 19,
-						},
-					},
+					makeToken(IDENT, "Person", 18, 1, 19),
 				},
 				Field: &IdentityExpression{
-					Token{Type: ASTERISK,
-						Literal: "*",
-						Pos: Position{
-							Offset: 25,
-							Line:   1,
-							Column: 26,
-						},
-					},
+					makeToken(ASTERISK, "*", 25, 1, 26),
 				},
 			},
 			&IdentityExpression{
-				Token{Type: IDENT,
-					Literal: "FROM",
-					Pos: Position{
-						Offset: 27,
-						Line:   1,
-						Column: 28,
-					},
-				},
+				makeToken(IDENT, "FROM", 27, 1, 28),
 			},
 			&IdentityExpression{
-				Token{Type: IDENT,
-					Literal: "person",
-					Pos: Position{
-						Offset: 32,
-						Line:   1,
-						Column: 33,
-					},
-				},
+				makeToken(IDENT, "person", 32, 1, 33),
 			},
 		},
 	}
@@ -157,6 +108,62 @@ func TestParserSimpleGroup(t *testing.T) {
 	assert.Equal(t, expected, r)
 }
 
+// Check that we return an error for empty groups
+func TestErrorEmptyGroupedColumn(t *testing.T) {
+	stmt := `SELECT () from person`
+
+	l := NewLexer(stmt)
+	p := NewParser(l)
+
+	r, e := p.Run()
+
+	assert.NotEqual(t, nil, e)
+	t.Log(e)
+	assert.NotEqual(t, nil, r)
+}
+
+// Check that we return an error for empty groups
+func TestErrorBadFormedGroupedColumn(t *testing.T) {
+	stmt := `SELECT (a, b,, c) from person`
+
+	l := NewLexer(stmt)
+	p := NewParser(l)
+
+	r, e := p.Run()
+
+	assert.NotEqual(t, nil, e)
+	t.Log(e)
+	assert.NotEqual(t, nil, r)
+}
+
+// Check that we return an error for empty groups
+func TestErrorUnfinishedGroup(t *testing.T) {
+	stmt := `SELECT (a, b, from person`
+
+	l := NewLexer(stmt)
+	p := NewParser(l)
+
+	r, e := p.Run()
+
+	assert.NotEqual(t, nil, e)
+	t.Log(e)
+	assert.NotEqual(t, nil, r)
+}
+
+func TestErrorEmptyStatement(t *testing.T) {
+	stmt := ``
+
+	l := NewLexer(stmt)
+	p := NewParser(l)
+
+	r, e := p.Run()
+
+	assert.NotEqual(t, nil, e)
+	t.Log(e)
+	assert.NotEqual(t, nil, r)
+}
+
+// Check parsing and detection of output expressions
 func TestParserSimpleOutputTarget(t *testing.T) {
 	stmt := `SELECT &Person.* FROM person`
 
@@ -169,64 +176,22 @@ func TestParserSimpleOutputTarget(t *testing.T) {
 	expected := &SQLExpression{
 		Children: []Expression{
 			&IdentityExpression{
-				Token{Type: IDENT,
-					Literal: "SELECT",
-					Pos: Position{
-						Offset: 0,
-						Line:   1,
-						Column: 1,
-					},
-				},
+				makeToken(IDENT, "SELECT", 0, 1, 1),
 			},
 			&OutputTargetExpression{
-				Marker: Token{Type: BITAND,
-					Literal: "&",
-					Pos: Position{
-						Offset: 7,
-						Line:   1,
-						Column: 8,
-					},
-				},
+				Marker: makeToken(BITAND, "&", 7, 1, 8),
 				Name: &IdentityExpression{
-					Token{Type: IDENT,
-						Literal: "Person",
-						Pos: Position{
-							Offset: 8,
-							Line:   1,
-							Column: 9,
-						},
-					},
+					makeToken(IDENT, "Person", 8, 1, 9),
 				},
 				Field: &IdentityExpression{
-					Token{Type: ASTERISK,
-						Literal: "*",
-						Pos: Position{
-							Offset: 15,
-							Line:   1,
-							Column: 16,
-						},
-					},
+					makeToken(ASTERISK, "*", 15, 1, 16),
 				},
 			},
 			&IdentityExpression{
-				Token{Type: IDENT,
-					Literal: "FROM",
-					Pos: Position{
-						Offset: 17,
-						Line:   1,
-						Column: 18,
-					},
-				},
+				makeToken(IDENT, "FROM", 17, 1, 18),
 			},
 			&IdentityExpression{
-				Token{Type: IDENT,
-					Literal: "person",
-					Pos: Position{
-						Offset: 22,
-						Line:   1,
-						Column: 23,
-					},
-				},
+				makeToken(IDENT, "person", 22, 1, 23),
 			},
 		},
 	}
@@ -234,6 +199,20 @@ func TestParserSimpleOutputTarget(t *testing.T) {
 	assert.Equal(t, expected, r)
 }
 
+func TestErrorMissingPeriodOutputTarget(t *testing.T) {
+	stmt := `SELECT * as &Person* from person`
+
+	l := NewLexer(stmt)
+	p := NewParser(l)
+
+	r, e := p.Run()
+
+	assert.NotEqual(t, nil, e)
+	t.Log(e)
+	assert.NotEqual(t, nil, r)
+}
+
+// Check parsing and detection of input source expressions
 func TestParserSimpleInputSource(t *testing.T) {
 	stmt := `UPDATE person SET surname='Hitchens' WHERE id=$Person.id;`
 
@@ -246,134 +225,43 @@ func TestParserSimpleInputSource(t *testing.T) {
 	expected := &SQLExpression{
 		Children: []Expression{
 			&IdentityExpression{
-				Token{Type: IDENT,
-					Literal: "UPDATE",
-					Pos: Position{
-						Offset: 0,
-						Line:   1,
-						Column: 1,
-					},
-				},
+				makeToken(IDENT, "UPDATE", 0, 1, 1),
 			},
 			&IdentityExpression{
-				Token{Type: IDENT,
-					Literal: "person",
-					Pos: Position{
-						Offset: 7,
-						Line:   1,
-						Column: 8,
-					},
-				},
+				makeToken(IDENT, "person", 7, 1, 8),
 			},
 			&IdentityExpression{
-				Token{Type: IDENT,
-					Literal: "SET",
-					Pos: Position{
-						Offset: 14,
-						Line:   1,
-						Column: 15,
-					},
-				},
+				makeToken(IDENT, "SET", 14, 1, 15),
 			},
 			&IdentityExpression{
-				Token{Type: IDENT,
-					Literal: "surname",
-					Pos: Position{
-						Offset: 18,
-						Line:   1,
-						Column: 19,
-					},
-				},
+				makeToken(IDENT, "surname", 18, 1, 19),
 			},
 			&IdentityExpression{
-				Token{Type: EQUAL,
-					Literal: "=",
-					Pos: Position{
-						Offset: 25,
-						Line:   1,
-						Column: 26,
-					},
-				},
+				makeToken(EQUAL, "=", 25, 1, 26),
 			},
 			&IdentityExpression{
-				Token{Type: STRING,
-					Literal: "'Hitchens'",
-					Pos: Position{
-						Offset: 26,
-						Line:   1,
-						Column: 27,
-					},
-				},
+				makeToken(STRING, "'Hitchens'", 26, 1, 27),
 			},
 			&IdentityExpression{
-				Token{Type: IDENT,
-					Literal: "WHERE",
-					Pos: Position{
-						Offset: 37,
-						Line:   1,
-						Column: 38,
-					},
-				},
+				makeToken(IDENT, "WHERE", 37, 1, 38),
 			},
 			&IdentityExpression{
-				Token{Type: IDENT,
-					Literal: "id",
-					Pos: Position{
-						Offset: 43,
-						Line:   1,
-						Column: 44,
-					},
-				},
+				makeToken(IDENT, "id", 43, 1, 44),
 			},
 			&IdentityExpression{
-				Token{Type: EQUAL,
-					Literal: "=",
-					Pos: Position{
-						Offset: 45,
-						Line:   1,
-						Column: 46,
-					},
-				},
+				makeToken(EQUAL, "=", 45, 1, 46),
 			},
 			&InputSourceExpression{
-				Marker: Token{Type: DOLLAR,
-					Literal: "$",
-					Pos: Position{
-						Offset: 46,
-						Line:   1,
-						Column: 47,
-					},
-				},
+				Marker: makeToken(DOLLAR, "$", 46, 1, 47),
 				Name: &IdentityExpression{
-					Token{Type: IDENT,
-						Literal: "Person",
-						Pos: Position{
-							Offset: 47,
-							Line:   1,
-							Column: 48,
-						},
-					},
+					makeToken(IDENT, "Person", 47, 1, 48),
 				},
 				Field: &IdentityExpression{
-					Token{Type: IDENT,
-						Literal: "id",
-						Pos: Position{
-							Offset: 54,
-							Line:   1,
-							Column: 55,
-						},
-					},
+					makeToken(IDENT, "id", 54, 1, 55),
 				},
 			},
 			&IdentityExpression{
-				Token{Type: SEMICOLON,
-					Literal: ";",
-					Pos: Position{
-						Offset: 56,
-						Line:   1,
-						Column: 57,
-					},
-				},
+				makeToken(SEMICOLON, ";", 56, 1, 57),
 			},
 		},
 	}

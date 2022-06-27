@@ -18,13 +18,13 @@ var precedence = map[TokenType]int{
 	RPAREN:   HIGHEST,
 }
 
-type PrefixFunc func() Expression
-type InfixFunc func(Expression) Expression
+type prefixFunc func() Expression
+type infixFunc func(Expression) Expression
 
 // Parser is responsible for returning an Expression tree
 // for a Sqlair DSL statement represented by a Lexer.
 type Parser struct {
-	lex *Lexer
+	lex *lexer
 
 	// Accumulated error messages.
 	errors []string
@@ -34,23 +34,23 @@ type Parser struct {
 
 	// Map of Prefix and Infix functions.
 	// Tokens will implement at most one of them.
-	prefixfn map[TokenType]PrefixFunc
-	infixfn  map[TokenType]InfixFunc
+	prefixFn map[TokenType]prefixFunc
+	infixFn  map[TokenType]infixFunc
 }
 
 // NewParser returns a reference to a Parser based on the input Lexer.
 // This parser implements a top-down parsing strategy with operator
 // precedence (Pratt's parser)
 // https://en.wikipedia.org/wiki/Operator-precedence_parser#Pratt_parsing
-func NewParser(l *Lexer) *Parser {
+func NewParser(l *lexer) *Parser {
 	p := &Parser{
 		lex: l,
 	}
 
 	// Fill prefix functions according to token type.
-	// Token types that has PrefixFunc do not care about the
+	// Token types that has prefixFunc do not care about the
 	// left part of the expression.
-	p.prefixfn = map[TokenType]PrefixFunc{
+	p.prefixFn = map[TokenType]prefixFunc{
 		ASTERISK:  p.parseIdent,
 		BITAND:    p.parseOutputTarget,
 		DOLLAR:    p.parseInputSource,
@@ -65,15 +65,15 @@ func NewParser(l *Lexer) *Parser {
 	}
 
 	// Fill infix functions according to token type.
-	// Tokens that has InfixFunc care about the left part
+	// Tokens that has infixFunc care about the left part
 	// of the expression.
-	p.infixfn = map[TokenType]InfixFunc{
+	p.infixFn = map[TokenType]infixFunc{
 		LBRACKET: p.parseIndex,
 	}
 
 	// Feed currentToken and peekToken
-	p.NextToken()
-	p.NextToken()
+	p.nextToken()
+	p.nextToken()
 
 	return p
 }
@@ -83,11 +83,11 @@ func NewParser(l *Lexer) *Parser {
 func (p *Parser) Run() (*SQLExpression, error) {
 	var exp SQLExpression
 	if p.currentToken.Type == EOF {
-		fmt.Println("Empty statement")
+		p.errors = append(p.errors, "Empty statement")
 	}
 	for p.currentToken.Type != EOF {
 		exp.Children = append(exp.Children, p.parseExpression(LOWEST))
-		p.NextToken()
+		p.nextToken()
 	}
 	var err error
 	if len(p.errors) > 0 {
@@ -98,7 +98,7 @@ func (p *Parser) Run() (*SQLExpression, error) {
 }
 
 func (p *Parser) parseExpression(prec_level int) Expression {
-	prefixfunc := p.prefixfn[p.currentToken.Type]
+	prefixfunc := p.prefixFn[p.currentToken.Type]
 	if prefixfunc == nil {
 		// Only some tokens have a prefix function
 		return nil
@@ -107,15 +107,15 @@ func (p *Parser) parseExpression(prec_level int) Expression {
 	// Get the left part of the tree
 	left := prefixfunc()
 
-	for prec_level < p.Precedence(p.peekToken) {
-		infixfunc := p.infixfn[p.peekToken.Type]
+	for prec_level < p.precedence(p.peekToken) {
+		infixfunc := p.infixFn[p.peekToken.Type]
 		if infixfunc == nil {
 			// We just need to return the left branch
 			// of the expression
 			return left
 		}
 		// Run the infix function
-		p.NextToken()
+		p.nextToken()
 		left = infixfunc(left)
 	}
 
@@ -125,24 +125,32 @@ func (p *Parser) parseExpression(prec_level int) Expression {
 func (p *Parser) parseOutputTarget() Expression {
 	var ote OutputTargetExpression
 	ote.Marker = p.currentToken
-	p.NextToken()
-	ote.Name = p.parseExpression(p.Precedence(p.currentToken))
+	p.nextToken()
+	ote.Name = p.parseExpression(p.precedence(p.currentToken))
 	// Skip period token and move to the next one
-	p.NextToken()
-	p.NextToken()
-	ote.Field = p.parseExpression(p.Precedence(p.currentToken))
+	p.nextToken()
+	if p.currentToken.Type != PERIOD {
+		p.errors = append(p.errors, fmt.Sprintf(
+			"Line: %d, column: %d: unexpected '%s', expecting PERIOD",
+			p.currentToken.Pos.Line,
+			p.currentToken.Pos.Column,
+			p.currentToken.Literal))
+		return nil
+	}
+	p.nextToken()
+	ote.Field = p.parseExpression(p.precedence(p.currentToken))
 	return &ote
 }
 
 func (p *Parser) parseInputSource() Expression {
 	var ise InputSourceExpression
 	ise.Marker = p.currentToken
-	p.NextToken()
-	ise.Name = p.parseExpression(p.Precedence(p.currentToken))
+	p.nextToken()
+	ise.Name = p.parseExpression(p.precedence(p.currentToken))
 	// Skip period token and move to the next one
-	p.NextToken()
-	p.NextToken()
-	ise.Field = p.parseExpression(p.Precedence(p.currentToken))
+	p.nextToken()
+	p.nextToken()
+	ise.Field = p.parseExpression(p.precedence(p.currentToken))
 	return &ise
 }
 
@@ -161,14 +169,42 @@ func (p *Parser) parseInteger() Expression {
 
 func (p *Parser) parseGroup() Expression {
 	// Skip left parenthesis
-	p.NextToken()
+	p.nextToken()
+	if p.currentToken.Type == RPAREN {
+		// Empty group.
+		p.errors = append(p.errors, fmt.Sprintf(
+			"Line: %d, column: %d: unexpected ')', expecting LITERAL",
+			p.currentToken.Pos.Line,
+			p.currentToken.Pos.Column))
+		return nil
+	}
 	var g GroupedColumnsExpression
-	for p.currentToken.Type != RPAREN {
+	consecutiveCommas := 1
+	for p.currentToken.Type != RPAREN && p.currentToken.Type != EOF {
 		if p.currentToken.Type != COMMA {
 			g.Children = append(g.Children, p.parseExpression(LOWEST))
+			consecutiveCommas = 0
+		} else {
+			consecutiveCommas++
 		}
-		p.NextToken()
+		if consecutiveCommas > 1 {
+			p.errors = append(p.errors, fmt.Sprintf(
+				"Line: %d, column: %d: unexpected ',', expecting LITERAL",
+				p.currentToken.Pos.Line,
+				p.currentToken.Pos.Column))
+			return nil
+		}
+		p.nextToken()
 	}
+
+	if p.currentToken.Type == EOF {
+		p.errors = append(p.errors, fmt.Sprintf(
+			"Line: %d, column: %d: unexpected 'EOF', expecting ')'",
+			p.currentToken.Pos.Line,
+			p.currentToken.Pos.Column))
+		return nil
+	}
+
 	return &g
 }
 
@@ -179,12 +215,12 @@ func (p *Parser) parseIndex(left Expression) Expression {
 	return &pte
 }
 
-func (p *Parser) NextToken() {
+func (p *Parser) nextToken() {
 	p.currentToken = p.peekToken
 	p.peekToken = p.lex.NextToken()
 }
 
-func (p *Parser) Precedence(t Token) int {
+func (p *Parser) precedence(t Token) int {
 	prec, ok := precedence[t.Type]
 	if !ok {
 		prec = LOWEST
