@@ -13,6 +13,8 @@ type testExp struct {
 }
 
 func (e *testExp) Type() ExpressionType { return e.t }
+func (e *testExp) Begin() Position       { return Position{} }
+func (e *testExp) End() Position       { return Position{} }
 func (e *testExp) String() string       { return "" }
 
 func (e *testExp) Expressions() []Expression {
