@@ -56,7 +56,8 @@ type Expression interface {
 }
 
 // Walk recursively iterates depth-first over the input expression tree,
-// calling the input function. If it returns false, the iteration terminates.
+// calling the input function for each visited expression.
+// If it returns false, the iteration terminates.
 func Walk(parent Expression, visit func(Expression) bool) bool {
 	if !visit(parent) {
 		return false
