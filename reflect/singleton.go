@@ -15,7 +15,7 @@ var (
 func Cache() *cache {
 	once.Do(func() {
 		singleCache = &cache{
-			cache: make(map[reflect.Type]Kind),
+			cache: make(map[reflect.Type]Info),
 		}
 	})
 
