@@ -3,43 +3,27 @@ package parse
 import (
 	"testing"
 
+	sqlairtesting "github.com/canonical/sqlair/testing"
 	"github.com/stretchr/testify/assert"
 )
 
-// testExp is a minimal implementation of Expression.
-type testExp struct {
-	t ExpressionType
-	e []*testExp
-}
-
-func (e *testExp) Type() ExpressionType { return e.t }
-func (e *testExp) String() string       { return "" }
-
-func (e *testExp) Expressions() []Expression {
-	res := make([]Expression, len(e.e))
-	for i, exp := range e.e {
-		res[i] = exp
-	}
-	return res
-}
-
 func TestWalk(t *testing.T) {
-	expr := &testExp{
-		t: SQL,
-		e: []*testExp{
+	expr := &sqlairtesting.SimpleExpression{
+		T: SQL,
+		E: []*sqlairtesting.SimpleExpression{
 			{
-				t: InputSource,
-				e: []*testExp{
+				T: InputSource,
+				E: []*sqlairtesting.SimpleExpression{
 					{
-						t: PassThrough,
+						T: PassThrough,
 					},
 				},
 			},
 			{
-				t: Identity,
+				T: Identity,
 			},
 			{
-				t: GroupedColumns,
+				T: GroupedColumns,
 			},
 		},
 	}
