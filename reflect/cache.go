@@ -12,12 +12,12 @@ import (
 // information for use in parsing and executing Sqlair DSL statements.
 type cache struct {
 	mutex sync.RWMutex
-	cache map[reflect.Type]Kind
+	cache map[reflect.Type]Info
 }
 
 // Reflect will return the Info of a given type,
 // generating and caching as required.
-func (r *cache) Reflect(value any) (Kind, error) {
+func (r *cache) Reflect(value any) (Info, error) {
 	v := reflect.ValueOf(value)
 	v = reflect.Indirect(v)
 
@@ -38,7 +38,7 @@ func (r *cache) Reflect(value any) (Kind, error) {
 
 // generate produces and returns reflection information for the input
 // reflect.Value that is specifically required for Sqlair operation.
-func generate(value reflect.Value) (Kind, error) {
+func generate(value reflect.Value) (Info, error) {
 	// Dereference the pointer if it is one.
 	value = reflect.Indirect(value)
 
@@ -49,7 +49,6 @@ func generate(value reflect.Value) (Kind, error) {
 	}
 
 	info := Struct{
-		Name:   value.Type().Name(),
 		Fields: make(map[string]Field),
 		value:  value,
 	}

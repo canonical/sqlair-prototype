@@ -1,62 +1,49 @@
-package parse
+// Package parse_test is used to avoid an import loop.
+// The testing package imports parse.
+package parse_test
 
 import (
 	"testing"
 
+	"github.com/canonical/sqlair/parse"
+	sqlairtesting "github.com/canonical/sqlair/testing"
 	"github.com/stretchr/testify/assert"
 )
 
-// testExp is a minimal implementation of Expression.
-type testExp struct {
-	t ExpressionType
-	e []*testExp
-}
-
-func (e *testExp) Type() ExpressionType { return e.t }
-func (e *testExp) String() string       { return "" }
-
-func (e *testExp) Expressions() []Expression {
-	res := make([]Expression, len(e.e))
-	for i, exp := range e.e {
-		res[i] = exp
-	}
-	return res
-}
-
 func TestWalk(t *testing.T) {
-	expr := &testExp{
-		t: SQL,
-		e: []*testExp{
+	expr := &sqlairtesting.SimpleExpression{
+		T: parse.SQL,
+		E: []*sqlairtesting.SimpleExpression{
 			{
-				t: InputSource,
-				e: []*testExp{
+				T: parse.InputSource,
+				E: []*sqlairtesting.SimpleExpression{
 					{
-						t: PassThrough,
+						T: parse.PassThrough,
 					},
 				},
 			},
 			{
-				t: Identity,
+				T: parse.Identity,
 			},
 			{
-				t: GroupedColumns,
+				T: parse.GroupedColumns,
 			},
 		},
 	}
 
-	var types []ExpressionType
-	visit := func(e Expression) bool {
-		if e.Type() == Identity {
+	var types []parse.ExpressionType
+	visit := func(e parse.Expression) bool {
+		if e.Type() == parse.Identity {
 			return false
 		}
 		types = append(types, e.Type())
 		return true
 	}
 
-	finished := Walk(expr, visit)
+	finished := parse.Walk(expr, visit)
 
 	// We expect to descend depth first into the expression tree,
 	// and stop at the `Identity` expression.
 	assert.False(t, finished)
-	assert.Equal(t, []ExpressionType{SQL, InputSource, PassThrough}, types)
+	assert.Equal(t, []parse.ExpressionType{parse.SQL, parse.InputSource, parse.PassThrough}, types)
 }

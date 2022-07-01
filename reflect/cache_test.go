@@ -27,6 +27,7 @@ func TestReflectSimpleConcurrent(t *testing.T) {
 	assert.Nil(t, err)
 
 	assert.Equal(t, reflect.Int64, info.Kind())
+	assert.Equal(t, "int64", info.Name())
 
 	_, ok := info.(Value)
 	assert.True(t, ok)
@@ -51,6 +52,7 @@ func TestReflectStruct(t *testing.T) {
 	assert.Nil(t, err)
 
 	assert.Equal(t, reflect.Struct, info.Kind())
+	assert.Equal(t, "something", info.Name())
 
 	st, ok := info.(Struct)
 	assert.True(t, ok)
