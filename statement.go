@@ -5,9 +5,9 @@ import (
 	sqlairreflect "github.com/canonical/sqlair/reflect"
 )
 
-// types is a convenience type alias for reflection
+// typeMap is a convenience type alias for reflection
 // information indexed by type name.
-type types = map[string]sqlairreflect.Info
+type typeMap = map[string]sqlairreflect.Info
 
 // Statement represents a prepared Sqlair DSL statement
 // that can be executed by the database.
@@ -16,7 +16,7 @@ type Statement struct {
 	expression parse.Expression
 
 	// argTypes holds the reflection info for types used in this statement.
-	argTypes types
+	argTypes typeMap
 }
 
 // Prepare accepts a raw DSL string and optionally,
@@ -66,9 +66,9 @@ func Prepare(stmt string, args ...any) (*Statement, error) {
 //         ON p.manager_id = m.id
 //      WHERE p.name = 'Fred'`, Person{}, Manager{})
 //
-func typesForStatement(args []any) (types, error) {
+func typesForStatement(args []any) (typeMap, error) {
 	c := sqlairreflect.Cache()
-	argTypes := make(types)
+	argTypes := make(typeMap)
 
 	for _, arg := range args {
 		reflected, err := c.Reflect(arg)
@@ -90,7 +90,7 @@ func typesForStatement(args []any) (types, error) {
 // validateExpressionTypes walks the input expression tree to ensure:
 // - Each input/output target in expression has type information in argTypes.
 // - All type information is actually required by the input/output targets.
-func validateExpressionTypes(statementExp parse.Expression, argTypes types) error {
+func validateExpressionTypes(statementExp parse.Expression, argTypes typeMap) error {
 	var err error
 	seen := make(map[string]bool)
 
