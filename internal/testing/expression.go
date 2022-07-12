@@ -10,6 +10,8 @@ type SimpleExpression struct {
 }
 
 func (e *SimpleExpression) Type() parse.ExpressionType { return e.T }
+func (e *SimpleExpression) Begin() parse.Position      { return parse.Position{} }
+func (e *SimpleExpression) End() parse.Position        { return parse.Position{} }
 func (e *SimpleExpression) String() string             { return e.S }
 
 func (e *SimpleExpression) Expressions() []parse.Expression {
