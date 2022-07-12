@@ -5,8 +5,8 @@ package parse_test
 import (
 	"testing"
 
-	"github.com/canonical/sqlair/parse"
-	sqlairtesting "github.com/canonical/sqlair/testing"
+	"github.com/canonical/sqlair/internal/parse"
+	sqlairtesting "github.com/canonical/sqlair/internal/testing"
 	"github.com/stretchr/testify/assert"
 )
 
