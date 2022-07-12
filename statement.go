@@ -1,8 +1,8 @@
 package sqlair
 
 import (
-	"github.com/canonical/sqlair/parse"
-	sqlairreflect "github.com/canonical/sqlair/reflect"
+	"github.com/canonical/sqlair/internal/parse"
+	sqlairreflect "github.com/canonical/sqlair/internal/reflect"
 )
 
 // typeMap is a convenience type alias for reflection
