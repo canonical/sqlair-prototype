@@ -83,6 +83,31 @@ FROM person`
 	}
 }
 
+func TestLexerUnTerminatedString(t *testing.T) {
+	stmt := `select 's`
+
+	tokens := tokensForStatement(stmt)
+
+	assert.Equal(t, STRING, tokens[1].Type)
+	assert.Equal(t, "'s", tokens[1].Literal)
+	assert.Equal(t, 8, tokens[1].Pos.Column)
+
+	t.Log(tokens)
+}
+
+func TestLexerUnknownToken(t *testing.T) {
+	stmt := `SELECT #a AS badtoken FROM t`
+
+	expected := []string{
+		"SELECT", "#", "a", "AS", "badtoken", "FROM", "t",
+	}
+
+	tokens := tokensForStatement(stmt)
+
+	assert.Equal(t, expected, stringsFromTokens(tokens))
+	assert.Equal(t, UNKNOWN, tokens[1].Type)
+}
+
 func tokensForStatement(stmt string) []Token {
 	lex := NewLexer(stmt)
 
