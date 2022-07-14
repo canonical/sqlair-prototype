@@ -118,7 +118,7 @@ func (l *lexer) readIdentifier() string {
 	return l.input[pos:l.offset]
 }
 
-// readNumber calls nextChar until it detects the end of a quoted string,
+// readString calls nextChar until it detects the end of a quoted string,
 // then returns the range of input from when we started reading.
 // The return includes the quotes.
 func (l *lexer) readString(r rune) string {

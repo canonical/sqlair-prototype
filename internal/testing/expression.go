@@ -1,6 +1,6 @@
 package testing
 
-import "github.com/canonical/sqlair/parse"
+import "github.com/canonical/sqlair/internal/parse"
 
 // SimpleExpression is a minimal implementation of parse.Expression.
 type SimpleExpression struct {

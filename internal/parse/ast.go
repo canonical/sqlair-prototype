@@ -46,31 +46,6 @@ const (
 	PassThrough
 )
 
-// String is a helper method that returns a literal string depending on the
-// ExpressionType
-func (et ExpressionType) String() string {
-	switch et {
-	case SQL:
-		return "SQL"
-	case DML:
-		return "DML"
-	case DDL:
-		return "DDL"
-	case GroupedColumns:
-		return "GroupedColumns"
-	case OutputTarget:
-		return "OutputTarget"
-	case InputSource:
-		return "InputSource"
-	case Identity:
-		return "Identity"
-	case PassThrough:
-		return "PassThrough"
-	}
-
-	return "Unknown ExpressionType"
-}
-
 // Expression describes a token or tokens in a Sqlair DSL statement
 // that represent a coherent, discrete subset of the DSL grammar.
 type Expression interface {
