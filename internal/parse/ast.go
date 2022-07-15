@@ -26,19 +26,10 @@ const (
 	// "(id, name)" in "SELECT (id, name) AS &Person.* FROM person;"
 	GroupedColumns
 
-	// OutputTarget is an expression representing a type into
-	// which the output of a SQL query is to be mapped.
-	// Example:
-	// "&Person.*" in "SELECT &Person.* FROM person;"
 	OutputTarget
 
-	// InputSource is an expression representing a type from
-	// which parameters of a statement are to be sourced.
-	// Example:
-	// "$Person.id" in "UPDATE person SET surname='Hitchens' WHERE id=$Person.id;"
 	InputSource
 
-	// Identity is an expression that identifies a single entity.
 	Identity
 
 	// PassThrough is an expression representing a chunk of SQL, DML or SQL
@@ -66,26 +57,14 @@ type Expression interface {
 	String() string
 }
 
-// beginChildren is a helper method that returns the position of the
-// first expression in the children array or an empty position if the
-// array is empty
-func beginChildren(children []Expression) Position {
-	var p Position
-	if len(children) > 0 {
-		p = children[0].Begin()
-	}
-	return p
-}
+// TypeMappingExpression describes an expression that
+// is for mapping inputs or outputs to Go types.
+type TypeMappingExpression interface {
+	Expression
 
-// endChildren is a helper method that returns the position of the
-// last expression in the children array or an empty position if the
-// array is empty
-func endChildren(children []Expression) Position {
-	var p Position
-	if l := len(children); l > 0 {
-		p = children[l-1].End()
-	}
-	return p
+	// TypeName returns the type name used in this expression,
+	// such as "Person" in "&Person.*" or "$Person.id".
+	TypeName() Expression
 }
 
 type SQLExpression struct {
@@ -100,6 +79,8 @@ func (sql *SQLExpression) Expressions() []Expression {
 	return sql.Children
 }
 
+// Begin implements Expression by returning the
+// Position of this Expression's first Token.
 func (sql *SQLExpression) Begin() Position {
 	return beginChildren(sql.Children)
 }
@@ -131,6 +112,8 @@ func (dml *DMLExpression) Expressions() []Expression {
 	return dml.Children
 }
 
+// Begin implements Expression by returning the
+// Position of this Expression's first Token.
 func (dml *DMLExpression) Begin() Position {
 	return beginChildren(dml.Children)
 }
@@ -159,6 +142,8 @@ func (ddl *DDLExpression) Expressions() []Expression {
 	return ddl.Children
 }
 
+// Begin implements Expression by returning the
+// Position of this Expression's first Token.
 func (ddl *DDLExpression) Begin() Position {
 	return beginChildren(ddl.Children)
 }
@@ -187,6 +172,8 @@ func (gce *GroupedColumnsExpression) Expressions() []Expression {
 	return gce.Children
 }
 
+// Begin implements Expression by returning the
+// Position of this Expression's first Token.
 func (gce *GroupedColumnsExpression) Begin() Position {
 	return beginChildren(gce.Children)
 }
@@ -208,92 +195,138 @@ func (gce *GroupedColumnsExpression) String() string {
 	return sb.String()
 }
 
+// OutputTargetExpression is an expression representing a type
+// into which the output of a SQL query is to be mapped.
+// Example:
+// "&Person.*" in "SELECT &Person.* FROM person;"
 type OutputTargetExpression struct {
-	Marker Token
-	Name   Expression
-	Field  Expression
+	marker Token
+	name   *IdentityExpression
+	field  *IdentityExpression
+}
+
+// NewOutputTargetExpression returns a reference to a new
+// OutputTargetExpression based on the input arguments.
+func NewOutputTargetExpression(
+	marker Token, name *IdentityExpression, field *IdentityExpression,
+) *OutputTargetExpression {
+	return &OutputTargetExpression{
+		marker: marker,
+		name:   name,
+		field:  field,
+	}
 }
 
 func (ote *OutputTargetExpression) Type() ExpressionType {
 	return OutputTarget
 }
 
+// Expressions implements Expression by returning the child Expressions.
 func (ote *OutputTargetExpression) Expressions() []Expression {
-	return []Expression{ote.Name, ote.Field}
+	return []Expression{ote.name, ote.field}
 }
 
+// Begin implements Expression by returning the
+// Position of this Expression's first Token.
 func (ote *OutputTargetExpression) Begin() Position {
-	return ote.Marker.Pos
+	return ote.marker.Pos
 }
 
 func (ote *OutputTargetExpression) End() Position {
-	return ote.Field.End()
+	return ote.field.End()
 }
 
 func (ote *OutputTargetExpression) String() string {
-	var sb strings.Builder
-	sb.WriteString(ote.Marker.Literal)
-	sb.WriteString(ote.Name.String())
-	sb.WriteByte('.')
-	sb.WriteString(ote.Field.String())
-	return sb.String()
+	return strings.Join([]string{ote.marker.Literal, ote.name.String(), ".", ote.field.String()}, "")
 }
 
+func (ote *OutputTargetExpression) TypeName() Expression {
+	return ote.name
+}
+
+// InputSourceExpression is an expression representing a type
+// from which parameters of a statement are to be sourced.
+// Example:
+// "$Person.id" in "UPDATE person SET surname='Hitchens' WHERE id=$Person.id;"
 type InputSourceExpression struct {
-	Marker Token
-	Name   Expression
-	Field  Expression
+	marker Token
+	name   Expression
+	field  Expression
+}
+
+// NewInputSourceExpression returns a reference to a new
+// InputSourceExpression based on the input arguments.
+func NewInputSourceExpression(
+	marker Token, name *IdentityExpression, field *IdentityExpression,
+) *InputSourceExpression {
+	return &InputSourceExpression{
+		marker: marker,
+		name:   name,
+		field:  field,
+	}
 }
 
 func (ise *InputSourceExpression) Type() ExpressionType {
 	return InputSource
 }
 
+// Expressions implements Expression by returning the child Expressions.
 func (ise *InputSourceExpression) Expressions() []Expression {
-	return []Expression{ise.Name, ise.Field}
+	return []Expression{ise.name, ise.field}
 }
 
+// Begin implements Expression by returning the
+// Position of this Expression's first Token.
 func (ise *InputSourceExpression) Begin() Position {
-	return ise.Marker.Pos
+	return ise.marker.Pos
 }
 
 func (ise *InputSourceExpression) End() Position {
-	return ise.Field.End()
+	return ise.field.End()
 }
 
 func (ise *InputSourceExpression) String() string {
-	var sb strings.Builder
-	sb.WriteString(ise.Marker.Literal)
-	sb.WriteString(ise.Name.String())
-	sb.WriteByte('.')
-	sb.WriteString(ise.Field.String())
-	return sb.String()
+	return strings.Join([]string{ise.marker.Literal, ise.name.String(), ".", ise.field.String()}, "")
 }
 
+func (ise *InputSourceExpression) TypeName() Expression {
+	return ise.name
+}
+
+// IdentityExpression is an expression that identifies a single entity.
 type IdentityExpression struct {
-	Token Token
+	token Token
+}
+
+// NewIdentityExpression returns a reference to a new
+// IdentityExpression based on the input Token.
+func NewIdentityExpression(token Token) *IdentityExpression {
+	return &IdentityExpression{token: token}
 }
 
 func (ie *IdentityExpression) Type() ExpressionType {
 	return Identity
 }
 
+// Expressions implements Expression by returning the child Expressions.
 func (ie *IdentityExpression) Expressions() []Expression {
 	return nil
 }
 
+// Begin implements Expression by returning the
+// Position of this Expression's first Token.
 func (ie *IdentityExpression) Begin() Position {
-	return ie.Token.Pos
+	return ie.token.Pos
 }
 
 func (ie *IdentityExpression) End() Position {
 	return Position{
-		Offset: ie.Token.Pos.Offset + len(ie.Token.Literal),
+		Offset: ie.token.Pos.Offset + len(ie.token.Literal),
 	}
 }
 
 func (ie *IdentityExpression) String() string {
-	return ie.Token.Literal
+	return ie.token.Literal
 }
 
 type PassThroughExpression struct {
@@ -304,10 +337,13 @@ func (pt *PassThroughExpression) Type() ExpressionType {
 	return PassThrough
 }
 
+// Expressions implements Expression by returning the child Expressions.
 func (pt *PassThroughExpression) Expressions() []Expression {
 	return pt.Children
 }
 
+// Begin implements Expression by returning the
+// Position of this Expression's first Token.
 func (pt *PassThroughExpression) Begin() Position {
 	return beginChildren(pt.Children)
 }
@@ -338,3 +374,24 @@ func Walk(parent Expression, visit func(Expression) error) error {
 	}
 	return nil
 }
+
+// beginChildren is a helper method that returns the position of the
+// first expression in the children array or an empty position if the
+// array is empty
+func beginChildren(children []Expression) Position {
+	if len(children) > 0 {
+		return children[0].Begin()
+	}
+	return Position{}
+}
+
+// endChildren is a helper method that returns the position of the
+// last expression in the children array or an empty position if the
+// array is empty
+func endChildren(children []Expression) Position {
+	if l := len(children); l > 0 {
+		return children[l-1].End()
+	}
+	return Position{}
+}
+

@@ -11,6 +11,40 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var _ parse.Expression = (*parse.IdentityExpression)(nil)
+
+func TestIdentityExpression(t *testing.T) {
+	literal := "identity"
+	exp := parse.NewIdentityExpression(tokensForStatement(literal)[0])
+
+	assert.Equal(t, literal, exp.String())
+	assert.Nil(t, exp.Expressions())
+}
+
+var _ parse.TypeMappingExpression = (*parse.OutputTargetExpression)(nil)
+
+func TestOutputTargetExpression(t *testing.T) {
+	literal := "&Person.*"
+	tokens := tokensForStatement(literal)
+	exp := parse.NewOutputTargetExpression(
+		tokens[0], parse.NewIdentityExpression(tokens[1]), parse.NewIdentityExpression(tokens[3]))
+
+	assert.Equal(t, literal, exp.String())
+	assert.Equal(t, "Person", exp.TypeName().String())
+}
+
+var _ parse.TypeMappingExpression = (*parse.InputSourceExpression)(nil)
+
+func TestInputSourceExpression(t *testing.T) {
+	literal := "$Address.id"
+	tokens := tokensForStatement(literal)
+	exp := parse.NewInputSourceExpression(
+		tokens[0], parse.NewIdentityExpression(tokens[1]), parse.NewIdentityExpression(tokens[3]))
+
+	assert.Equal(t, literal, exp.String())
+	assert.Equal(t, "Address", exp.TypeName().String())
+}
+
 func TestWalk(t *testing.T) {
 	expr := &sqlairtesting.SimpleExpression{
 		T: parse.SQL,
@@ -47,4 +81,15 @@ func TestWalk(t *testing.T) {
 	// and stop at the `Identity` expression.
 	assert.NotNil(t, err)
 	assert.Equal(t, []parse.ExpressionType{parse.SQL, parse.InputSource, parse.PassThrough}, types)
+}
+
+func tokensForStatement(stmt string) []parse.Token {
+	lex := parse.NewLexer(stmt)
+
+	var tokens []parse.Token
+	for token := lex.NextToken(); token.Type != parse.EOF; token = lex.NextToken() {
+		tokens = append(tokens, token)
+	}
+
+	return tokens
 }
