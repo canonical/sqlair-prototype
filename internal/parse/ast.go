@@ -326,15 +326,15 @@ func (pt *PassThroughExpression) String() string {
 
 // Walk recursively iterates depth-first over the input expression tree,
 // calling the input function for each visited expression.
-// If it returns false, the iteration terminates.
-func Walk(parent Expression, visit func(Expression) bool) bool {
-	if !visit(parent) {
-		return false
+// If it returns an error, the iteration terminates.
+func Walk(parent Expression, visit func(Expression) error) error {
+	if err := visit(parent); err != nil {
+		return err
 	}
 	for _, child := range parent.Expressions() {
-		if !Walk(child, visit) {
-			return false
+		if err := Walk(child, visit); err != nil {
+			return err
 		}
 	}
-	return true
+	return nil
 }

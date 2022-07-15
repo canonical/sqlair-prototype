@@ -91,12 +91,11 @@ func typesForStatement(args []any) (typeMap, error) {
 // - Each input/output target in expression has type information in argTypes.
 // - All type information is actually required by the input/output targets.
 func validateExpressionTypes(statementExp parse.Expression, argTypes typeMap) error {
-	var err error
 	seen := make(map[string]bool)
 
-	visit := func(exp parse.Expression) bool {
+	visit := func(exp parse.Expression) error {
 		if t := exp.Type(); t != parse.OutputTarget && t != parse.InputSource {
-			return true
+			return nil
 		}
 
 		// Select the first identity, such as "Person"
@@ -104,17 +103,16 @@ func validateExpressionTypes(statementExp parse.Expression, argTypes typeMap) er
 		// Ensure that there is type information for it.
 		typeName := exp.Expressions()[1].String()
 		if _, ok := argTypes[typeName]; !ok {
-			err = NewErrTypeInfoNotPresent(typeName)
-			return false
+			return NewErrTypeInfoNotPresent(typeName)
 		}
 
 		seen[typeName] = true
-		return true
+		return nil
 	}
 
 	// If we did not complete the walk through the tree,
 	// return the error that we encountered.
-	if !parse.Walk(statementExp, visit) {
+	if err := parse.Walk(statementExp, visit); err != nil {
 		return err
 	}
 
