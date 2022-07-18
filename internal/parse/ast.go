@@ -78,26 +78,22 @@ func (sql *SQLExpression) String() string {
 // DMLExpression is a parent expression representing a data modification
 // language statement, i.e insert, update or delete.
 type DMLExpression struct {
-	Children []Expression
-}
-
-func (dml *DMLExpression) Expressions() []Expression {
-	return dml.Children
+	parentExpressionBase
 }
 
 // Begin implements Expression by returning the
 // Position of this Expression's first Token.
 func (dml *DMLExpression) Begin() Position {
-	return beginChildren(dml.Children)
+	return beginChildren(dml.Expressions())
 }
 
 func (dml *DMLExpression) End() Position {
-	return endChildren(dml.Children)
+	return endChildren(dml.Expressions())
 }
 
 func (dml *DMLExpression) String() string {
 	var sb bytes.Buffer
-	for _, exp := range dml.Children {
+	for _, exp := range dml.Expressions() {
 		sb.WriteString(exp.String())
 	}
 	return sb.String()
@@ -106,26 +102,22 @@ func (dml *DMLExpression) String() string {
 // DDLExpression is a parent expression representing a data definition
 // language statement such as a table creation.
 type DDLExpression struct {
-	Children []Expression
-}
-
-func (ddl *DDLExpression) Expressions() []Expression {
-	return ddl.Children
+	parentExpressionBase
 }
 
 // Begin implements Expression by returning the
 // Position of this Expression's first Token.
 func (ddl *DDLExpression) Begin() Position {
-	return beginChildren(ddl.Children)
+	return beginChildren(ddl.Expressions())
 }
 
 func (ddl *DDLExpression) End() Position {
-	return endChildren(ddl.Children)
+	return endChildren(ddl.Expressions())
 }
 
 func (ddl *DDLExpression) String() string {
 	var sb bytes.Buffer
-	for _, exp := range ddl.Children {
+	for _, exp := range ddl.Expressions() {
 		sb.WriteString(exp.String())
 	}
 	return sb.String()
@@ -136,27 +128,23 @@ func (ddl *DDLExpression) String() string {
 // Example:
 // "(id, name)" in "SELECT (id, name) AS &Person.* FROM person;"
 type GroupedColumnsExpression struct {
-	Children []Expression
-}
-
-func (gce *GroupedColumnsExpression) Expressions() []Expression {
-	return gce.Children
+	parentExpressionBase
 }
 
 // Begin implements Expression by returning the
 // Position of this Expression's first Token.
 func (gce *GroupedColumnsExpression) Begin() Position {
-	return beginChildren(gce.Children)
+	return beginChildren(gce.Expressions())
 }
 
 func (gce *GroupedColumnsExpression) End() Position {
-	return endChildren(gce.Children)
+	return endChildren(gce.Expressions())
 }
 
 func (gce *GroupedColumnsExpression) String() string {
 	var sb strings.Builder
 	sb.WriteByte('(')
-	for i, exp := range gce.Children {
+	for i, exp := range gce.Expressions() {
 		if i > 0 {
 			sb.WriteString(", ")
 		}
@@ -291,27 +279,22 @@ func (ie *IdentityExpression) String() string {
 // PassThroughExpression is an expression representing a chunk of SQL, DML
 // or SQL that Sqlair will effectively ignore and pass to the DB as is.
 type PassThroughExpression struct {
-	Children []Expression
-}
-
-// Expressions implements Expression by returning the child Expressions.
-func (pt *PassThroughExpression) Expressions() []Expression {
-	return pt.Children
+	parentExpressionBase
 }
 
 // Begin implements Expression by returning the
 // Position of this Expression's first Token.
 func (pt *PassThroughExpression) Begin() Position {
-	return beginChildren(pt.Children)
+	return beginChildren(pt.Expressions())
 }
 
 func (pt *PassThroughExpression) End() Position {
-	return endChildren(pt.Children)
+	return endChildren(pt.Expressions())
 }
 
 func (pt *PassThroughExpression) String() string {
 	var sb strings.Builder
-	for _, exp := range pt.Children {
+	for _, exp := range pt.Expressions() {
 		sb.WriteString(exp.String())
 	}
 	return sb.String()
