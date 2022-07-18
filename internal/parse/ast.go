@@ -43,6 +43,24 @@ func (e *parentExpressionBase) Expressions() []Expression {
 	return e.children
 }
 
+// Begin implements Expression by returning the start
+// Position of this Expression's first Token.
+func (e *parentExpressionBase) Begin() Position {
+	if len(e.children) > 0 {
+		return e.children[0].Begin()
+	}
+	return Position{}
+}
+
+// End implements Expression by returning the end
+// Position of this Expression's last Token.
+func (e *parentExpressionBase) End() Position {
+	if l := len(e.children); l > 0 {
+		return e.children[l-1].End()
+	}
+	return Position{}
+}
+
 // AppendExpression appends the input expression to this parent's children.
 func (e *parentExpressionBase) AppendExpression(child Expression) {
 	e.children = append(e.children, child)
@@ -52,16 +70,6 @@ func (e *parentExpressionBase) AppendExpression(child Expression) {
 // a full structured query language query.
 type SQLExpression struct {
 	parentExpressionBase
-}
-
-// Begin implements Expression by returning the
-// Position of this Expression's first Token.
-func (sql *SQLExpression) Begin() Position {
-	return beginChildren(sql.Expressions())
-}
-
-func (sql *SQLExpression) End() Position {
-	return endChildren(sql.Expressions())
 }
 
 func (sql *SQLExpression) String() string {
@@ -81,16 +89,6 @@ type DMLExpression struct {
 	parentExpressionBase
 }
 
-// Begin implements Expression by returning the
-// Position of this Expression's first Token.
-func (dml *DMLExpression) Begin() Position {
-	return beginChildren(dml.Expressions())
-}
-
-func (dml *DMLExpression) End() Position {
-	return endChildren(dml.Expressions())
-}
-
 func (dml *DMLExpression) String() string {
 	var sb bytes.Buffer
 	for _, exp := range dml.Expressions() {
@@ -103,16 +101,6 @@ func (dml *DMLExpression) String() string {
 // language statement such as a table creation.
 type DDLExpression struct {
 	parentExpressionBase
-}
-
-// Begin implements Expression by returning the
-// Position of this Expression's first Token.
-func (ddl *DDLExpression) Begin() Position {
-	return beginChildren(ddl.Expressions())
-}
-
-func (ddl *DDLExpression) End() Position {
-	return endChildren(ddl.Expressions())
 }
 
 func (ddl *DDLExpression) String() string {
@@ -129,16 +117,6 @@ func (ddl *DDLExpression) String() string {
 // "(id, name)" in "SELECT (id, name) AS &Person.* FROM person;"
 type GroupedColumnsExpression struct {
 	parentExpressionBase
-}
-
-// Begin implements Expression by returning the
-// Position of this Expression's first Token.
-func (gce *GroupedColumnsExpression) Begin() Position {
-	return beginChildren(gce.Expressions())
-}
-
-func (gce *GroupedColumnsExpression) End() Position {
-	return endChildren(gce.Expressions())
 }
 
 func (gce *GroupedColumnsExpression) String() string {
@@ -282,16 +260,6 @@ type PassThroughExpression struct {
 	parentExpressionBase
 }
 
-// Begin implements Expression by returning the
-// Position of this Expression's first Token.
-func (pt *PassThroughExpression) Begin() Position {
-	return beginChildren(pt.Expressions())
-}
-
-func (pt *PassThroughExpression) End() Position {
-	return endChildren(pt.Expressions())
-}
-
 func (pt *PassThroughExpression) String() string {
 	var sb strings.Builder
 	for _, exp := range pt.Expressions() {
@@ -313,24 +281,4 @@ func Walk(parent Expression, visit func(Expression) error) error {
 		}
 	}
 	return nil
-}
-
-// beginChildren is a helper method that returns the position of the
-// first expression in the children array or an empty position if the
-// array is empty
-func beginChildren(children []Expression) Position {
-	if len(children) > 0 {
-		return children[0].Begin()
-	}
-	return Position{}
-}
-
-// endChildren is a helper method that returns the position of the
-// last expression in the children array or an empty position if the
-// array is empty
-func endChildren(children []Expression) Position {
-	if l := len(children); l > 0 {
-		return children[l-1].End()
-	}
-	return Position{}
 }
