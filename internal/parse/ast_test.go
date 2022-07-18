@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/canonical/sqlair/internal/parse"
-	sqlairtesting "github.com/canonical/sqlair/internal/testing"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -25,7 +24,7 @@ var _ parse.Expression = (*parse.SQLExpression)(nil)
 
 func TestSQLExpression(t *testing.T) {
 	literal := "identity"
-	exp := parse.SQLExpression{}
+	exp := &parse.SQLExpression{}
 	exp.AppendExpression(parse.NewIdentityExpression(tokensForStatement(literal)[0]))
 
 	children := exp.Expressions()
@@ -58,41 +57,29 @@ func TestInputSourceExpression(t *testing.T) {
 }
 
 func TestWalk(t *testing.T) {
-	expr := &sqlairtesting.SimpleExpression{
-		T: parse.SQL,
-		E: []*sqlairtesting.SimpleExpression{
-			{
-				T: parse.InputSource,
-				E: []*sqlairtesting.SimpleExpression{
-					{
-						T: parse.PassThrough,
-					},
-				},
-			},
-			{
-				T: parse.Identity,
-			},
-			{
-				T: parse.GroupedColumns,
-			},
-		},
-	}
+	expr := &parse.SQLExpression{}
 
-	var types []parse.ExpressionType
+	token := tokensForStatement("identity")[0]
+	expr.AppendExpression(parse.NewIdentityExpression(token))
+	expr.AppendExpression(parse.NewIdentityExpression(token))
+
+	var count int
 	visit := func(e parse.Expression) error {
-		if e.Type() == parse.Identity {
+		count++
+
+		switch e.(type) {
+		case *parse.IdentityExpression:
 			return errors.New("stop")
 		}
-		types = append(types, e.Type())
 		return nil
 	}
 
 	err := parse.Walk(expr, visit)
 
 	// We expect to descend depth first into the expression tree,
-	// and stop at the `Identity` expression.
+	// and stop at the *first* IdentityExpression.
 	assert.NotNil(t, err)
-	assert.Equal(t, []parse.ExpressionType{parse.SQL, parse.InputSource, parse.PassThrough}, types)
+	assert.Equal(t, 2, count)
 }
 
 func tokensForStatement(stmt string) []parse.Token {
