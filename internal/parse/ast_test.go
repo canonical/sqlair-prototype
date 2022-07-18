@@ -21,6 +21,18 @@ func TestIdentityExpression(t *testing.T) {
 	assert.Nil(t, exp.Expressions())
 }
 
+var _ parse.Expression = (*parse.SQLExpression)(nil)
+
+func TestSQLExpression(t *testing.T) {
+	literal := "identity"
+	exp := parse.SQLExpression{}
+	exp.AppendExpression(parse.NewIdentityExpression(tokensForStatement(literal)[0]))
+
+	children := exp.Expressions()
+	assert.Len(t, children, 1)
+	assert.Equal(t, literal, children[0].String())
+}
+
 var _ parse.TypeMappingExpression = (*parse.OutputTargetExpression)(nil)
 
 func TestOutputTargetExpression(t *testing.T) {

@@ -8,8 +8,6 @@ import (
 type ExpressionType int64
 
 const (
-	// SQL is a parent expression representing a
-	// full structured query language query.
 	SQL ExpressionType = iota
 
 	// DML is a parent expression representing a data modification
@@ -67,31 +65,45 @@ type TypeMappingExpression interface {
 	TypeName() Expression
 }
 
+// parentExpressionBase implements base functionality for working
+// with expressions that are parents of other expressions.
+type parentExpressionBase struct {
+	children []Expression
+}
+
+// Expressions returns all the child expressions for this parent.
+func (e *parentExpressionBase) Expressions() []Expression {
+	return e.children
+}
+
+// AppendExpression appends the input expression to this parent's children.
+func (e *parentExpressionBase) AppendExpression(child Expression) {
+	e.children = append(e.children, child)
+}
+
+// SQLExpression is a parent expression representing
+// a full structured query language query.
 type SQLExpression struct {
-	Children []Expression
+	parentExpressionBase
 }
 
 func (sql *SQLExpression) Type() ExpressionType {
 	return SQL
 }
 
-func (sql *SQLExpression) Expressions() []Expression {
-	return sql.Children
-}
-
 // Begin implements Expression by returning the
 // Position of this Expression's first Token.
 func (sql *SQLExpression) Begin() Position {
-	return beginChildren(sql.Children)
+	return beginChildren(sql.Expressions())
 }
 
 func (sql *SQLExpression) End() Position {
-	return endChildren(sql.Children)
+	return endChildren(sql.Expressions())
 }
 
 func (sql *SQLExpression) String() string {
 	var sb strings.Builder
-	for i, exp := range sql.Children {
+	for i, exp := range sql.Expressions() {
 		if i > 0 {
 			sb.WriteByte(' ')
 		}
@@ -394,4 +406,3 @@ func endChildren(children []Expression) Position {
 	}
 	return Position{}
 }
-
