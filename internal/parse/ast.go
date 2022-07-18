@@ -72,9 +72,9 @@ type SQLExpression struct {
 	parentExpressionBase
 }
 
-func (sql *SQLExpression) String() string {
+func (e *SQLExpression) String() string {
 	var sb strings.Builder
-	for i, exp := range sql.Expressions() {
+	for i, exp := range e.Expressions() {
 		if i > 0 {
 			sb.WriteByte(' ')
 		}
@@ -89,9 +89,9 @@ type DMLExpression struct {
 	parentExpressionBase
 }
 
-func (dml *DMLExpression) String() string {
+func (e *DMLExpression) String() string {
 	var sb bytes.Buffer
-	for _, exp := range dml.Expressions() {
+	for _, exp := range e.Expressions() {
 		sb.WriteString(exp.String())
 	}
 	return sb.String()
@@ -103,9 +103,9 @@ type DDLExpression struct {
 	parentExpressionBase
 }
 
-func (ddl *DDLExpression) String() string {
+func (e *DDLExpression) String() string {
 	var sb bytes.Buffer
-	for _, exp := range ddl.Expressions() {
+	for _, exp := range e.Expressions() {
 		sb.WriteString(exp.String())
 	}
 	return sb.String()
@@ -119,10 +119,10 @@ type GroupedColumnsExpression struct {
 	parentExpressionBase
 }
 
-func (gce *GroupedColumnsExpression) String() string {
+func (e *GroupedColumnsExpression) String() string {
 	var sb strings.Builder
 	sb.WriteByte('(')
-	for i, exp := range gce.Expressions() {
+	for i, exp := range e.Expressions() {
 		if i > 0 {
 			sb.WriteString(", ")
 		}
@@ -155,26 +155,26 @@ func NewOutputTargetExpression(
 }
 
 // Expressions implements Expression by returning the child Expressions.
-func (ote *OutputTargetExpression) Expressions() []Expression {
-	return []Expression{ote.name, ote.field}
+func (e *OutputTargetExpression) Expressions() []Expression {
+	return []Expression{e.name, e.field}
 }
 
 // Begin implements Expression by returning the
 // Position of this Expression's first Token.
-func (ote *OutputTargetExpression) Begin() Position {
-	return ote.marker.Pos
+func (e *OutputTargetExpression) Begin() Position {
+	return e.marker.Pos
 }
 
-func (ote *OutputTargetExpression) End() Position {
-	return ote.field.End()
+func (e *OutputTargetExpression) End() Position {
+	return e.field.End()
 }
 
-func (ote *OutputTargetExpression) String() string {
-	return strings.Join([]string{ote.marker.Literal, ote.name.String(), ".", ote.field.String()}, "")
+func (e *OutputTargetExpression) String() string {
+	return strings.Join([]string{e.marker.Literal, e.name.String(), ".", e.field.String()}, "")
 }
 
-func (ote *OutputTargetExpression) TypeName() Expression {
-	return ote.name
+func (e *OutputTargetExpression) TypeName() Expression {
+	return e.name
 }
 
 // InputSourceExpression is an expression representing a type
@@ -200,26 +200,26 @@ func NewInputSourceExpression(
 }
 
 // Expressions implements Expression by returning the child Expressions.
-func (ise *InputSourceExpression) Expressions() []Expression {
-	return []Expression{ise.name, ise.field}
+func (e *InputSourceExpression) Expressions() []Expression {
+	return []Expression{e.name, e.field}
 }
 
 // Begin implements Expression by returning the
 // Position of this Expression's first Token.
-func (ise *InputSourceExpression) Begin() Position {
-	return ise.marker.Pos
+func (e *InputSourceExpression) Begin() Position {
+	return e.marker.Pos
 }
 
-func (ise *InputSourceExpression) End() Position {
-	return ise.field.End()
+func (e *InputSourceExpression) End() Position {
+	return e.field.End()
 }
 
-func (ise *InputSourceExpression) String() string {
-	return strings.Join([]string{ise.marker.Literal, ise.name.String(), ".", ise.field.String()}, "")
+func (e *InputSourceExpression) String() string {
+	return strings.Join([]string{e.marker.Literal, e.name.String(), ".", e.field.String()}, "")
 }
 
-func (ise *InputSourceExpression) TypeName() Expression {
-	return ise.name
+func (e *InputSourceExpression) TypeName() Expression {
+	return e.name
 }
 
 // IdentityExpression is an expression that identifies a single entity.
@@ -234,24 +234,24 @@ func NewIdentityExpression(token Token) *IdentityExpression {
 }
 
 // Expressions implements Expression by returning the child Expressions.
-func (ie *IdentityExpression) Expressions() []Expression {
+func (e *IdentityExpression) Expressions() []Expression {
 	return nil
 }
 
 // Begin implements Expression by returning the
 // Position of this Expression's first Token.
-func (ie *IdentityExpression) Begin() Position {
-	return ie.token.Pos
+func (e *IdentityExpression) Begin() Position {
+	return e.token.Pos
 }
 
-func (ie *IdentityExpression) End() Position {
+func (e *IdentityExpression) End() Position {
 	return Position{
-		Offset: ie.token.Pos.Offset + len(ie.token.Literal),
+		Offset: e.token.Pos.Offset + len(e.token.Literal),
 	}
 }
 
-func (ie *IdentityExpression) String() string {
-	return ie.token.Literal
+func (e *IdentityExpression) String() string {
+	return e.token.Literal
 }
 
 // PassThroughExpression is an expression representing a chunk of SQL, DML
@@ -260,9 +260,9 @@ type PassThroughExpression struct {
 	parentExpressionBase
 }
 
-func (pt *PassThroughExpression) String() string {
+func (e *PassThroughExpression) String() string {
 	var sb strings.Builder
-	for _, exp := range pt.Expressions() {
+	for _, exp := range e.Expressions() {
 		sb.WriteString(exp.String())
 	}
 	return sb.String()
