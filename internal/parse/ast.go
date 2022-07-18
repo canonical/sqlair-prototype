@@ -5,42 +5,9 @@ import (
 	"strings"
 )
 
-type ExpressionType int64
-
-const (
-	SQL ExpressionType = iota
-
-	// DML is a parent expression representing a data modification
-	// language statement, i.e insert, update or delete.
-	DML
-
-	// DDL is a parent expression representing a data definition
-	// language statement such as a table creation.
-	DDL
-
-	// GroupedColumns is an expression representing a list of columns to be
-	// selected into a struct reference, as found within a query.
-	// Example:
-	// "(id, name)" in "SELECT (id, name) AS &Person.* FROM person;"
-	GroupedColumns
-
-	OutputTarget
-
-	InputSource
-
-	Identity
-
-	// PassThrough is an expression representing a chunk of SQL, DML or SQL
-	// that Sqlair will effectively ignore and pass to the DB as is.
-	PassThrough
-)
-
 // Expression describes a token or tokens in a Sqlair DSL statement
 // that represent a coherent, discrete subset of the DSL grammar.
 type Expression interface {
-	// Type indicates the type of this expression.
-	Type() ExpressionType
-
 	// Expressions returns the child expressions
 	// that constitute this parent expression.
 	Expressions() []Expression
@@ -87,10 +54,6 @@ type SQLExpression struct {
 	parentExpressionBase
 }
 
-func (sql *SQLExpression) Type() ExpressionType {
-	return SQL
-}
-
 // Begin implements Expression by returning the
 // Position of this Expression's first Token.
 func (sql *SQLExpression) Begin() Position {
@@ -112,12 +75,10 @@ func (sql *SQLExpression) String() string {
 	return sb.String()
 }
 
+// DMLExpression is a parent expression representing a data modification
+// language statement, i.e insert, update or delete.
 type DMLExpression struct {
 	Children []Expression
-}
-
-func (dml *DMLExpression) Type() ExpressionType {
-	return DML
 }
 
 func (dml *DMLExpression) Expressions() []Expression {
@@ -142,12 +103,10 @@ func (dml *DMLExpression) String() string {
 	return sb.String()
 }
 
+// DDLExpression is a parent expression representing a data definition
+// language statement such as a table creation.
 type DDLExpression struct {
 	Children []Expression
-}
-
-func (ddl *DDLExpression) Type() ExpressionType {
-	return DDL
 }
 
 func (ddl *DDLExpression) Expressions() []Expression {
@@ -172,12 +131,12 @@ func (ddl *DDLExpression) String() string {
 	return sb.String()
 }
 
+// GroupedColumnsExpression is an expression representing a list of columns
+// to be selected into a struct reference, as found within a query.
+// Example:
+// "(id, name)" in "SELECT (id, name) AS &Person.* FROM person;"
 type GroupedColumnsExpression struct {
 	Children []Expression
-}
-
-func (gce *GroupedColumnsExpression) Type() ExpressionType {
-	return GroupedColumns
 }
 
 func (gce *GroupedColumnsExpression) Expressions() []Expression {
@@ -229,10 +188,6 @@ func NewOutputTargetExpression(
 	}
 }
 
-func (ote *OutputTargetExpression) Type() ExpressionType {
-	return OutputTarget
-}
-
 // Expressions implements Expression by returning the child Expressions.
 func (ote *OutputTargetExpression) Expressions() []Expression {
 	return []Expression{ote.name, ote.field}
@@ -278,10 +233,6 @@ func NewInputSourceExpression(
 	}
 }
 
-func (ise *InputSourceExpression) Type() ExpressionType {
-	return InputSource
-}
-
 // Expressions implements Expression by returning the child Expressions.
 func (ise *InputSourceExpression) Expressions() []Expression {
 	return []Expression{ise.name, ise.field}
@@ -316,10 +267,6 @@ func NewIdentityExpression(token Token) *IdentityExpression {
 	return &IdentityExpression{token: token}
 }
 
-func (ie *IdentityExpression) Type() ExpressionType {
-	return Identity
-}
-
 // Expressions implements Expression by returning the child Expressions.
 func (ie *IdentityExpression) Expressions() []Expression {
 	return nil
@@ -341,12 +288,10 @@ func (ie *IdentityExpression) String() string {
 	return ie.token.Literal
 }
 
+// PassThroughExpression is an expression representing a chunk of SQL, DML
+// or SQL that Sqlair will effectively ignore and pass to the DB as is.
 type PassThroughExpression struct {
 	Children []Expression
-}
-
-func (pt *PassThroughExpression) Type() ExpressionType {
-	return PassThrough
 }
 
 // Expressions implements Expression by returning the child Expressions.
