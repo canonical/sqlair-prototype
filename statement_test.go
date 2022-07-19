@@ -26,59 +26,59 @@ func TestTypesForStatementDuplicateNamesError(t *testing.T) {
 	assert.Error(t, err, NewErrTypeNameNotUnique("Person"))
 }
 
-func TestValidateExpressionTypesFullCoverage(t *testing.T) {
+// TODO (manadart 2022-07-15): The tests below are for verification during
+// an intermediate stage. They will be subject to deletion shortly.
+
+func TestInterpretFullCoverage(t *testing.T) {
 	type address struct{}
 
 	argTypes, err := typesForStatement([]any{sqlairtesting.Person{}, address{}})
 	assert.Nil(t, err)
 
-	err = validateExpressionTypes(getExpression(), argTypes)
+	err = interpret(getExpression(), argTypes)
 	assert.Nil(t, err)
 }
 
-func TestValidateExpressionTypesMissingTypesError(t *testing.T) {
+func TestInterpretMissingTypesError(t *testing.T) {
 	argTypes, err := typesForStatement([]any{sqlairtesting.Person{}})
 	assert.Nil(t, err)
 
-	err = validateExpressionTypes(getExpression(), argTypes)
+	err = interpret(getExpression(), argTypes)
 	assert.Error(t, err, NewErrTypeInfoNotPresent("address"))
 }
 
-func TestValidateExpressionTypesSuperfluousTypesError(t *testing.T) {
+func TestInterpretSuperfluousTypesError(t *testing.T) {
 	type address struct{}
 	type notUsed struct{}
 
 	argTypes, err := typesForStatement([]any{sqlairtesting.Person{}, address{}, notUsed{}})
 	assert.Nil(t, err)
 
-	err = validateExpressionTypes(getExpression(), argTypes)
+	err = interpret(getExpression(), argTypes)
 	assert.Error(t, err, NewErrSuperfluousType("notUsed"))
 }
 
 func getExpression() parse.Expression {
-	return &sqlairtesting.SimpleExpression{
-		T: parse.SQL,
-		E: []*sqlairtesting.SimpleExpression{
-			{
-				T: parse.OutputTarget,
-				E: []*sqlairtesting.SimpleExpression{
-					{},
-					{
-						T: parse.Identity,
-						S: "Person",
-					},
-				},
-			},
-			{
-				T: parse.InputSource,
-				E: []*sqlairtesting.SimpleExpression{
-					{},
-					{
-						T: parse.Identity,
-						S: "address",
-					},
-				},
-			},
-		},
+	exp := &parse.SQLExpression{}
+
+	tokens := tokensForStatement("&Person.*")
+	exp.AppendExpression(parse.NewOutputTargetExpression(
+		tokens[0], parse.NewIdentityExpression(tokens[1]), parse.NewIdentityExpression(tokens[3])))
+
+	tokens = tokensForStatement("$address.id")
+	exp.AppendExpression(parse.NewInputSourceExpression(
+		tokens[0], parse.NewIdentityExpression(tokens[1]), parse.NewIdentityExpression(tokens[3])))
+
+	return exp
+}
+
+func tokensForStatement(stmt string) []parse.Token {
+	lex := parse.NewLexer(stmt)
+
+	var tokens []parse.Token
+	for token := lex.NextToken(); token.Type != parse.EOF; token = lex.NextToken() {
+		tokens = append(tokens, token)
 	}
+
+	return tokens
 }
