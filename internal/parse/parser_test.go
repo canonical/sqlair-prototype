@@ -1,6 +1,7 @@
 package parse
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -27,7 +28,7 @@ func printAST(t *testing.T, e Expression, indentation int) {
 	for i := 0; i < indentation; i++ {
 		ind = ind + " "
 	}
-	t.Log(ind, e.String(), "[", e.Type(), "]")
+	t.Log(ind, e.String(), "[", reflect.TypeOf(e).String(), "]")
 	for _, c := range e.Expressions() {
 		printAST(t, c, indentation+4)
 	}
@@ -50,11 +51,13 @@ func TestParserCarriageReturnAndSpaces(t *testing.T) {
 	// We parse properly ignoring blanks and new lines.
 	assert.Equal(t, r.String(), "SELECT a AS myalias FROM person")
 	// Top of the AST is a SQL Expression.
-	assert.Equal(t, r.Type(), SQL)
+	assert.Equal(t, reflect.TypeOf(r), reflect.TypeOf(&SQLExpression{}))
+	t.Log(reflect.TypeOf(r).String(), " --> ", reflect.TypeOf(&SQLExpression{}).String())
 	// The rest of the expressions are Indent. Nothing to be reflected
 	// in this statement.
 	for _, c := range r.Expressions() {
-		assert.Equal(t, c.Type(), Identity)
+		t.Log(reflect.TypeOf(c), reflect.TypeOf(&IdentityExpression{}))
+		assert.Equal(t, reflect.TypeOf(c), reflect.TypeOf(&IdentityExpression{}))
 	}
 }
 
@@ -68,44 +71,48 @@ func TestParserSimpleGroup(t *testing.T) {
 	r, _ := p.Run()
 
 	printAST(t, r, 0)
-	expected := &SQLExpression{
-		Children: []Expression{
+
+	var expected SQLExpression
+	expected.AppendExpression(
+		&IdentityExpression{
+			makeToken(IDENT, "SELECT", 0, 1, 1),
+		})
+	var gce GroupedColumnsExpression
+	gce.AppendExpression(
+		&IdentityExpression{
+			makeToken(IDENT, "a", 8, 1, 9),
+		})
+	gce.AppendExpression(
+		&IdentityExpression{
+			makeToken(IDENT, "b", 11, 1, 12),
+		})
+	expected.AppendExpression(&gce)
+	expected.AppendExpression(
+		&IdentityExpression{
+			makeToken(IDENT, "AS", 14, 1, 15),
+		})
+	expected.AppendExpression(
+		NewOutputTargetExpression(
+			makeToken(BITAND, "&", 17, 1, 18),
 			&IdentityExpression{
-				makeToken(IDENT, "SELECT", 0, 1, 1),
-			},
-			&GroupedColumnsExpression{
-				Children: []Expression{
-					&IdentityExpression{
-						makeToken(IDENT, "a", 8, 1, 9),
-					},
-					&IdentityExpression{
-						makeToken(IDENT, "b", 11, 1, 12),
-					},
-				},
-			},
-			&IdentityExpression{
-				makeToken(IDENT, "AS", 14, 1, 15),
-			},
-			&OutputTargetExpression{
-				Marker: makeToken(BITAND, "&", 17, 1, 18),
-				Name: &IdentityExpression{
-					makeToken(IDENT, "Person", 18, 1, 19),
-				},
-				Field: &IdentityExpression{
-					makeToken(ASTERISK, "*", 25, 1, 26),
-				},
-			},
-			&IdentityExpression{
-				makeToken(IDENT, "FROM", 27, 1, 28),
+				makeToken(IDENT, "Person", 18, 1, 19),
 			},
 			&IdentityExpression{
-				makeToken(IDENT, "person", 32, 1, 33),
+				makeToken(ASTERISK, "*", 25, 1, 26),
 			},
-		},
-	}
+		),
+	)
+	expected.AppendExpression(
+		&IdentityExpression{
+			makeToken(IDENT, "FROM", 27, 1, 28),
+		})
+	expected.AppendExpression(
+		&IdentityExpression{
+			makeToken(IDENT, "person", 32, 1, 33),
+		})
 
 	assert.NotEqual(t, r, nil)
-	assert.Equal(t, expected, r)
+	assert.Equal(t, &expected, r)
 }
 
 // Check that we return an error for empty groups
@@ -173,30 +180,35 @@ func TestParserSimpleOutputTarget(t *testing.T) {
 	r, _ := p.Run()
 
 	printAST(t, r, 0)
-	expected := &SQLExpression{
-		Children: []Expression{
-			&IdentityExpression{
-				makeToken(IDENT, "SELECT", 0, 1, 1),
-			},
-			&OutputTargetExpression{
-				Marker: makeToken(BITAND, "&", 7, 1, 8),
-				Name: &IdentityExpression{
-					makeToken(IDENT, "Person", 8, 1, 9),
-				},
-				Field: &IdentityExpression{
-					makeToken(ASTERISK, "*", 15, 1, 16),
-				},
-			},
-			&IdentityExpression{
-				makeToken(IDENT, "FROM", 17, 1, 18),
-			},
-			&IdentityExpression{
-				makeToken(IDENT, "person", 22, 1, 23),
-			},
+	var expected SQLExpression
+	expected.AppendExpression(
+		&IdentityExpression{
+			makeToken(IDENT, "SELECT", 0, 1, 1),
 		},
-	}
+	)
+	expected.AppendExpression(
+		NewOutputTargetExpression(
+			makeToken(BITAND, "&", 7, 1, 8),
+			&IdentityExpression{
+				makeToken(IDENT, "Person", 8, 1, 9),
+			},
+			&IdentityExpression{
+				makeToken(ASTERISK, "*", 15, 1, 16),
+			},
+		),
+	)
+	expected.AppendExpression(
+		&IdentityExpression{
+			makeToken(IDENT, "FROM", 17, 1, 18),
+		},
+	)
+	expected.AppendExpression(
+		&IdentityExpression{
+			makeToken(IDENT, "person", 22, 1, 23),
+		},
+	)
 	assert.NotEqual(t, r, nil)
-	assert.Equal(t, expected, r)
+	assert.Equal(t, &expected, r)
 }
 
 func TestErrorMissingPeriodOutputTarget(t *testing.T) {
@@ -222,49 +234,59 @@ func TestParserSimpleInputSource(t *testing.T) {
 	r, _ := p.Run()
 
 	printAST(t, r, 0)
-	expected := &SQLExpression{
-		Children: []Expression{
+	var expected SQLExpression
+	expected.AppendExpression(
+		&IdentityExpression{
+			makeToken(IDENT, "UPDATE", 0, 1, 1),
+		})
+	expected.AppendExpression(
+		&IdentityExpression{
+			makeToken(IDENT, "person", 7, 1, 8),
+		})
+	expected.AppendExpression(
+		&IdentityExpression{
+			makeToken(IDENT, "SET", 14, 1, 15),
+		})
+	expected.AppendExpression(
+		&IdentityExpression{
+			makeToken(IDENT, "surname", 18, 1, 19),
+		})
+	expected.AppendExpression(
+		&IdentityExpression{
+			makeToken(EQUAL, "=", 25, 1, 26),
+		})
+	expected.AppendExpression(
+		&IdentityExpression{
+			makeToken(STRING, "'Hitchens'", 26, 1, 27),
+		})
+	expected.AppendExpression(
+		&IdentityExpression{
+			makeToken(IDENT, "WHERE", 37, 1, 38),
+		})
+	expected.AppendExpression(
+		&IdentityExpression{
+			makeToken(IDENT, "id", 43, 1, 44),
+		})
+	expected.AppendExpression(
+		&IdentityExpression{
+			makeToken(EQUAL, "=", 45, 1, 46),
+		})
+	expected.AppendExpression(
+		NewInputSourceExpression(
+			makeToken(DOLLAR, "$", 46, 1, 47),
 			&IdentityExpression{
-				makeToken(IDENT, "UPDATE", 0, 1, 1),
+				makeToken(IDENT, "Person", 47, 1, 48),
 			},
 			&IdentityExpression{
-				makeToken(IDENT, "person", 7, 1, 8),
+				makeToken(IDENT, "id", 54, 1, 55),
 			},
-			&IdentityExpression{
-				makeToken(IDENT, "SET", 14, 1, 15),
-			},
-			&IdentityExpression{
-				makeToken(IDENT, "surname", 18, 1, 19),
-			},
-			&IdentityExpression{
-				makeToken(EQUAL, "=", 25, 1, 26),
-			},
-			&IdentityExpression{
-				makeToken(STRING, "'Hitchens'", 26, 1, 27),
-			},
-			&IdentityExpression{
-				makeToken(IDENT, "WHERE", 37, 1, 38),
-			},
-			&IdentityExpression{
-				makeToken(IDENT, "id", 43, 1, 44),
-			},
-			&IdentityExpression{
-				makeToken(EQUAL, "=", 45, 1, 46),
-			},
-			&InputSourceExpression{
-				Marker: makeToken(DOLLAR, "$", 46, 1, 47),
-				Name: &IdentityExpression{
-					makeToken(IDENT, "Person", 47, 1, 48),
-				},
-				Field: &IdentityExpression{
-					makeToken(IDENT, "id", 54, 1, 55),
-				},
-			},
-			&IdentityExpression{
-				makeToken(SEMICOLON, ";", 56, 1, 57),
-			},
+		),
+	)
+	expected.AppendExpression(
+		&IdentityExpression{
+			makeToken(SEMICOLON, ";", 56, 1, 57),
 		},
-	}
+	)
 	assert.NotEqual(t, r, nil)
-	assert.Equal(t, expected, r)
+	assert.Equal(t, &expected, r)
 }

@@ -86,7 +86,7 @@ func (p *Parser) Run() (*SQLExpression, error) {
 		p.errors = append(p.errors, "Empty statement")
 	}
 	for p.currentToken.Type != EOF {
-		exp.Children = append(exp.Children, p.parseExpression(LOWEST))
+		exp.AppendExpression(p.parseExpression(LOWEST))
 		p.nextToken()
 	}
 	var err error
@@ -123,10 +123,9 @@ func (p *Parser) parseExpression(prec_level int) Expression {
 }
 
 func (p *Parser) parseOutputTarget() Expression {
-	var ote OutputTargetExpression
-	ote.Marker = p.currentToken
+	marker := p.currentToken
 	p.nextToken()
-	ote.Name = p.parseExpression(p.precedence(p.currentToken))
+	name := p.parseExpression(p.precedence(p.currentToken)).(*IdentityExpression)
 	// Skip period token and move to the next one
 	p.nextToken()
 	if p.currentToken.Type != PERIOD {
@@ -138,20 +137,19 @@ func (p *Parser) parseOutputTarget() Expression {
 		return nil
 	}
 	p.nextToken()
-	ote.Field = p.parseExpression(p.precedence(p.currentToken))
-	return &ote
+	field := p.parseExpression(p.precedence(p.currentToken)).(*IdentityExpression)
+	return NewOutputTargetExpression(marker, name, field)
 }
 
 func (p *Parser) parseInputSource() Expression {
-	var ise InputSourceExpression
-	ise.Marker = p.currentToken
+	marker := p.currentToken
 	p.nextToken()
-	ise.Name = p.parseExpression(p.precedence(p.currentToken))
+	name := p.parseExpression(p.precedence(p.currentToken)).(*IdentityExpression)
 	// Skip period token and move to the next one
 	p.nextToken()
 	p.nextToken()
-	ise.Field = p.parseExpression(p.precedence(p.currentToken))
-	return &ise
+	field := p.parseExpression(p.precedence(p.currentToken)).(*IdentityExpression)
+	return NewInputSourceExpression(marker, name, field)
 }
 
 func (p *Parser) parseIdent() Expression {
@@ -182,7 +180,7 @@ func (p *Parser) parseGroup() Expression {
 	consecutiveCommas := 1
 	for p.currentToken.Type != RPAREN && p.currentToken.Type != EOF {
 		if p.currentToken.Type != COMMA {
-			g.Children = append(g.Children, p.parseExpression(LOWEST))
+			g.AppendExpression(p.parseExpression(LOWEST))
 			consecutiveCommas = 0
 		} else {
 			consecutiveCommas++
@@ -210,8 +208,8 @@ func (p *Parser) parseGroup() Expression {
 
 func (p *Parser) parseIndex(left Expression) Expression {
 	var pte PassThroughExpression
-	pte.Children = append(pte.Children, left)
-	pte.Children = append(pte.Children, &IdentityExpression{p.currentToken})
+	pte.AppendExpression(left)
+	pte.AppendExpression(&IdentityExpression{p.currentToken})
 	return &pte
 }
 
