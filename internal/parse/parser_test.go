@@ -52,7 +52,6 @@ func TestParserCarriageReturnAndSpaces(t *testing.T) {
 	assert.Equal(t, r.String(), "SELECT a AS myalias FROM person")
 	// Top of the AST is a SQL Expression.
 	assert.Equal(t, reflect.TypeOf(r), reflect.TypeOf(&SQLExpression{}))
-	t.Log(reflect.TypeOf(r).String(), " --> ", reflect.TypeOf(&SQLExpression{}).String())
 	// The rest of the expressions are Indent. Nothing to be reflected
 	// in this statement.
 	for _, c := range r.Expressions() {
