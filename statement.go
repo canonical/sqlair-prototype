@@ -39,7 +39,7 @@ func Prepare(stmt string, args ...any) (*Statement, error) {
 		return nil, err
 	}
 
-	if err := validateExpressionTypes(exp, argTypes); err != nil {
+	if err := interpret(exp, argTypes); err != nil {
 		return nil, err
 	}
 
@@ -87,34 +87,26 @@ func typesForStatement(args []any) (typeMap, error) {
 	return argTypes, nil
 }
 
-// validateExpressionTypes walks the input expression tree to ensure:
+// interpret walks the input expression tree to ensure:
 // - Each input/output target in expression has type information in argTypes.
 // - All type information is actually required by the input/output targets.
-func validateExpressionTypes(statementExp parse.Expression, argTypes typeMap) error {
+// - TODO (manadart 2022-07-15): Add further interpreter behaviour.
+func interpret(statementExp parse.Expression, argTypes typeMap) error {
 	var err error
 	seen := make(map[string]bool)
 
-	visit := func(exp parse.Expression) bool {
-		if t := exp.Type(); t != parse.OutputTarget && t != parse.InputSource {
-			return true
+	visit := func(exp parse.Expression) error {
+		switch e := exp.(type) {
+		case *parse.OutputTargetExpression, *parse.InputSourceExpression:
+			if seen, err = validateExpressionType(e.(parse.TypeMappingExpression), argTypes, seen); err != nil {
+				return err
+			}
 		}
 
-		// Select the first identity, such as "Person"
-		// in the case of "$Person.id".
-		// Ensure that there is type information for it.
-		typeName := exp.Expressions()[1].String()
-		if _, ok := argTypes[typeName]; !ok {
-			err = NewErrTypeInfoNotPresent(typeName)
-			return false
-		}
-
-		seen[typeName] = true
-		return true
+		return nil
 	}
 
-	// If we did not complete the walk through the tree,
-	// return the error that we encountered.
-	if !parse.Walk(statementExp, visit) {
+	if err := parse.Walk(statementExp, visit); err != nil {
 		return err
 	}
 
@@ -127,4 +119,19 @@ func validateExpressionTypes(statementExp parse.Expression, argTypes typeMap) er
 	}
 
 	return nil
+}
+
+// validateExpressionType ensures that the type name identity from the input
+// expression is present in the input type information. If it is not, an error
+// is returned. The list of seen types is updated and returned.
+func validateExpressionType(
+	exp parse.TypeMappingExpression, argTypes typeMap, seen map[string]bool,
+) (map[string]bool, error) {
+	typeName := exp.TypeName().String()
+	if _, ok := argTypes[typeName]; !ok {
+		return seen, NewErrTypeInfoNotPresent(typeName)
+	}
+
+	seen[typeName] = true
+	return seen, nil
 }
