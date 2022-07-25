@@ -11,7 +11,7 @@ import (
 // It operates in a lazy fashion, requiring a call to
 // `NextToken` to advance through the input.
 // Offsets are zero-indexed. Lines start at 1.
-type Lexer struct {
+type lexer struct {
 	input string
 	char  rune
 
@@ -23,8 +23,8 @@ type Lexer struct {
 
 // NewLexer creates a new Lexer from a given input and primes it
 // with the first non-whitespace character before returning.
-func NewLexer(input string) *Lexer {
-	l := &Lexer{
+func NewLexer(input string) *lexer {
+	l := &lexer{
 		input:  strings.TrimSpace(input),
 		line:   1,
 		column: 1,
@@ -37,7 +37,7 @@ func NewLexer(input string) *Lexer {
 // the current offset, ignoring whitespace.
 // The EOF token is returned if we have
 // reached the end of the input.
-func (l *Lexer) NextToken() Token {
+func (l *lexer) NextToken() Token {
 	for l.skipWhitespace() {
 	}
 
@@ -57,7 +57,7 @@ func (l *Lexer) NextToken() Token {
 	return l.readComplexToken(pos)
 }
 
-func (l *Lexer) position() Position {
+func (l *lexer) position() Position {
 	return Position{
 		Offset: l.offset,
 		Line:   l.line,
@@ -67,7 +67,7 @@ func (l *Lexer) position() Position {
 
 // skipWhitespace checks if the current character is a space
 // and if so, reads the next character before returning true.
-func (l *Lexer) skipWhitespace() bool {
+func (l *lexer) skipWhitespace() bool {
 	if !unicode.IsSpace(l.char) {
 		return false
 	}
@@ -76,7 +76,7 @@ func (l *Lexer) skipWhitespace() bool {
 	return true
 }
 
-func (l *Lexer) readComplexToken(pos Position) Token {
+func (l *lexer) readComplexToken(pos Position) Token {
 	tok := Token{Pos: pos}
 
 	switch {
@@ -108,7 +108,7 @@ func (l *Lexer) readComplexToken(pos Position) Token {
 
 // readIdentifier calls nextChar until it detects the end of an identifier,
 // then returns the range of input from when we started reading.
-func (l *Lexer) readIdentifier() string {
+func (l *lexer) readIdentifier() string {
 	pos := l.offset
 
 	for unicode.IsLetter(l.char) || isDigit(l.char) || l.char == '_' {
@@ -121,7 +121,7 @@ func (l *Lexer) readIdentifier() string {
 // readString calls nextChar until it detects the end of a quoted string,
 // then returns the range of input from when we started reading.
 // The return includes the quotes.
-func (l *Lexer) readString(r rune) string {
+func (l *lexer) readString(r rune) string {
 	pos := l.offset
 
 	maybeCloser := true
@@ -153,7 +153,7 @@ func (l *Lexer) readString(r rune) string {
 
 // readNumber calls nextChar until it detects the end of a number,
 // then returns the range of input from when we started reading.
-func (l *Lexer) readNumber() string {
+func (l *lexer) readNumber() string {
 	pos := l.offset
 
 	var oneDecimal bool
@@ -177,7 +177,7 @@ func (l *Lexer) readNumber() string {
 
 // nextChar reads the next character from the
 // input and increments the read offset.
-func (l *Lexer) nextChar() {
+func (l *lexer) nextChar() {
 	if l.readOffset >= len(l.input) {
 		l.char = 0
 		l.offset = l.readOffset
@@ -196,7 +196,7 @@ func (l *Lexer) nextChar() {
 }
 
 // peek returns the next rune to be read without moving the lexer forward.
-func (l *Lexer) peek() rune {
+func (l *lexer) peek() rune {
 	if l.readOffset >= len(l.input) {
 		return 0
 	}
